@@ -1,29 +1,34 @@
-# Carnet d'entretien
+# Mon garage : carnet d'entretien
 
-Web app simple pour suivre l'entretien de vos véhicules, logement et équipements
-(chaudière, appareils…). Elle fonctionne hors ligne et s'installe sur l'iPhone
-comme une vraie application.
+Web app pour iPhone (installable sur l'écran d'accueil) qui suit l'entretien de :
+- **Mercedes V220 d** (vidange/Service A et B, boîte auto 7G/9G-Tronic, filtres, liquide de frein, pneus, contrôle technique…)
+- **Harley-Davidson FXDRS 114** (vidange moteur, carter primaire, boîte, courroie, pneus avant/arrière, bougies…)
+- **VTT électrique Decathlon** (révision, chaîne, plaquettes, purge, fourche, batterie…)
 
 ## Fonctions
 
-- Équipements : voiture, moto, vélo, logement, chaudière, appareil, autre.
-- Interventions : date, coût, kilométrage, garage / prestataire, notes.
-- Rappels : prochaine échéance par date et/ou kilométrage, avec un badge
-  « Bientôt » (30 jours ou 1 000 km avant) ou « En retard ».
-- Dépenses de l'année et total par équipement.
-- Sauvegarde : export / import d'un fichier JSON (Fichiers, iCloud Drive, mail…).
+- **Échéances** : pour chaque point d'entretien, prochaine date et/ou kilométrage, avec un badge
+  « Bientôt » ou « En retard ». Avec quelques relevés de compteur, l'appli estime aussi la date.
+- **Scanner une facture** (photo, photothèque ou PDF) : véhicule, date, kilométrage, garage, montant et
+  travaux réalisés sont reconnus et pré-remplis. Vous vérifiez, puis validez.
+  - Sans réglage : lecture sur le téléphone (OCR gratuit). Correcte sur une facture nette, moins fiable sur une photo de travers.
+  - Avec une clé API Claude (Réglages ⚙️) : lecture beaucoup plus fiable, quelques centimes par facture.
+- **Saisie manuelle** de tout : interventions, kilométrage, pressions des pneus, intervalles du plan, points d'entretien en plus.
+- **Contrôles rapides** (pression des pneus, graissage chaîne) : bouton ✓ en un geste.
+- **Sauvegarde** : export / import d'un fichier (avec les photos de factures) vers Fichiers, iCloud, mail…
 
-Les données restent uniquement sur le téléphone. Pensez à exporter une sauvegarde de temps en temps.
+Les données restent sur le téléphone. Les intervalles proposés sont **indicatifs** : vérifiez-les avec
+votre carnet constructeur ou votre concession et ajustez-les (✏️ sur chaque point).
 
 ## Mise en ligne (une seule fois)
 
 1. Fusionner cette branche dans `main`.
 2. Sur GitHub : **Settings → Pages → Build and deployment → Source : GitHub Actions**.
-3. L'action « Publier le carnet d'entretien » publie l'app à l'adresse
-   `https://<votre-compte>.github.io/<dépôt>/` (par exemple https://regisparpaillon.github.io/Claude/).
+3. L'action « Publier le carnet d'entretien » publie l'app sur https://regisparpaillon.github.io/Claude/
 
 ## Installation sur l'iPhone
 
 1. Ouvrir l'adresse ci-dessus dans **Safari**.
-2. Toucher **Partager** (carré avec une flèche) → **Sur l'écran d'accueil** → **Ajouter**.
-3. Lancer « Entretien » depuis l'écran d'accueil.
+2. **Partager** → **Sur l'écran d'accueil** → **Ajouter**.
+3. Ouvrir « Garage », renseigner le kilométrage et l'immatriculation de chaque véhicule, puis scanner les
+   dernières factures pour que les échéances se calculent.
