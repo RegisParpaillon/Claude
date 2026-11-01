@@ -489,8 +489,12 @@ function miniLevel() {
     <div class="body"><b>Niveau ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
     <div class="sub">${L.max ? 'Niveau maximal 👑' : `${L.cur} / ${L.need} XP`}</div></div><span class="chev">›</span></button>`;
 }
+function statBox(st) {
+  return `<div class="stat-box">${Object.entries(Game.STAT_INFO).map(([k, x]) => `<div><span>${x.label}</span><i><b style="width:${st[k]}%"></b></i><em>${st[k]}</em></div>`).join('')}</div>`;
+}
 function viewGame() {
   header('Progression');
+  const stats = Game.computeStats(S);
   const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
   const wk = Game.weekKey(Date.now());
   const es = S.history.filter(h => Game.weekKey(h.date) === wk);
@@ -501,7 +505,7 @@ function viewGame() {
   const daysLeft = Math.max(1, Math.ceil((end - Date.now()) / 864e5));
   $('#app').innerHTML = `
     <div class="panel" style="--rc:${R.color}">
-      <div class="panel-art ${Manga.hasStages() ? 'is-stage' : Manga.hasPhoto() ? 'is-photo' : ''}">${Manga.hasStages() ? `<div class="stage-bg" style="background-image:url(${Manga.stageUrl(R.index)})"></div>` : ''}${avatar(R.index, 'big')}
+      <div class="panel-art ${Manga.hasStages() ? 'is-stage' : Manga.hasPhoto() ? 'is-photo' : ''}">${Manga.hasStages() ? `<div class="stage-bg" style="background-image:url(${Manga.stageUrl(R.index)})"></div>` : ''}<div class="art-wrap">${avatar(R.index, 'big')}${statBox(stats)}</div>
         ${Manga.hasStages() ? '' : `<div class="bubble">${esc(R.quote)}</div><div class="rank-badge">${R.letter}</div>`}</div>
       <div class="panel-info">
         <div class="lvl-num">NIV. <b>${L.level}</b></div>
@@ -516,6 +520,9 @@ function viewGame() {
       <div class="stat"><b>🔥 ${streak}</b><span>semaine${streak > 1 ? 's' : ''} active${streak > 1 ? 's' : ''} d’affilée</span></div>
       <div class="stat"><b>${Object.keys(S.game.badges).length} / ${Game.BADGES.length}</b><span>badges</span></div>
     </div>
+    <h2>Mes stats</h2>
+    <div class="card">${Object.entries(Game.STAT_INFO).map(([k, x]) => `<div class="row"><span class="emoji">${x.icon}</span><div class="body"><div class="title">${x.label} <b class="stat-val">${stats[k]}</b></div>
+      <div class="xpbar"><i style="width:${stats[k]}%"></i></div><div class="sub">${x.how}</div></div></div>`).join('')}</div>
     <h2>Quêtes de la semaine · encore ${daysLeft} j</h2>
     <div class="card">${quests.map(q => {
       const n = Math.min(q.goal, q.count(es)), ok = done.includes(q.id);

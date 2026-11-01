@@ -42,7 +42,14 @@ dans le profil (quelques centimes par séance, la clé reste sur le téléphone)
 
 **Progression 🏆 (gamification)**
 - XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
-- Niveaux et rangs E → D → C → B → A → S → SS.
+- Niveaux 1 à 100 en 9 paliers : Débutant (1), En progression (20), Plus fort (40), Très performant (60),
+  Athlète confirmé (80), Elite (90), Légende (95), Surhumain (98), Parfait (100).
+- **Planche d'évolution** : importez une image de 9 cases (5 en haut, 4 en bas, par exemple créée avec
+  ChatGPT) ; l'app la découpe sur le téléphone et affiche la case de votre palier. Les paliers suivants
+  restent masqués jusqu'à ce qu'ils soient atteints.
+- **Stats du personnage** calculées sur vos vraies données et affichées sur l'image :
+  Force (maxis / poids de corps), Endurance (allures et sortie longue), Muscle (séries récentes et séances),
+  Mental (régularité, quêtes, séances faites malgré la fatigue).
 - **Avatar manga à partir d'une photo ou d'un selfie** : la photo est transformée en case de manga sur le
   téléphone (traits à l'encre, trames de points, aplats noirs, lignes de vitesse et cadre aux couleurs du rang),
   avec recadrage au doigt et réglage des traits et des ombres. Rien n'est envoyé sur internet. Les effets

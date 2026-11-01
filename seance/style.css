@@ -365,3 +365,20 @@ body.has-tabs { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .stage-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(14px) brightness(.55); }
 .panel-art.is-stage .avatar.stage { position: relative; }
 .lvl-face img.stage { object-position: 50% 6%; transform: scale(1.45); transform-origin: 50% 72%; }
+/* Stats sur l'image */
+.art-wrap { position: relative; display: block; width: fit-content; max-width: 100%; margin: 0 auto; }
+.panel-art:not(.is-stage) .art-wrap { width: 100%; }
+.stat-box { position: absolute; left: 6%; right: 6%; bottom: 3%; background: rgba(10,12,40,.82); border: 1.5px solid rgba(255,255,255,.35);
+  border-radius: 8px; padding: 6px 9px; color: #fff; font: 600 12px/1.25 -apple-system, "Segoe UI", sans-serif; backdrop-filter: blur(3px); }
+.stat-box div { display: grid; grid-template-columns: 72px 1fr 26px; align-items: center; gap: 6px; }
+.stat-box i { height: 6px; border-radius: 9px; background: rgba(255,255,255,.2); overflow: hidden; }
+.stat-box i b { display: block; height: 100%; background: linear-gradient(90deg, #38bdf8, #a78bfa); }
+.stat-box em { font-style: normal; text-align: right; font-weight: 800; }
+.panel-art.is-stage .stat-box { bottom: 1.5%; left: 4%; right: 4%; padding: 8px 10px; }
+.panel-art:not(.is-stage) .stat-box { left: auto; right: 12px; bottom: 74px; width: 52%; }
+.panel-art.is-photo .stat-box { top: 14px; bottom: auto; }
+.stat-val { float: right; }
+.stat-box div { grid-template-columns: 1fr auto; gap: 1px 6px; margin-bottom: 3px; }
+.stat-box i { grid-column: 1 / -1; grid-row: 2; height: 4px; }
+.stat-box span, .stat-box em { grid-row: 1; }
+.panel-art.is-stage .stat-box { font-size: 11.5px; }

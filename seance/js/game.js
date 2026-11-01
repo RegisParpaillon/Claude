@@ -119,3 +119,32 @@ export function evaluate(S, profileLevel) {
   g.bonus += out.bonus;
   return out;
 }
+
+// ---------- Statistiques du personnage (0 à 100), calculées à partir des vraies données ----------
+const clamp = v => Math.max(1, Math.min(100, Math.round(v)));
+const STD = { bench: 1.75, squat: 2.4, deadlift: 2.9, ohp: 1.15 };   // ratio max / poids de corps « élite »
+
+export function computeStats(S) {
+  const p = S.profile, bw = p.bodyweight || 75, now = Date.now();
+  const lifts = Object.keys(STD);
+  const force = clamp(100 * lifts.reduce((a, l) => a + Math.pow(Math.min(1.2, (p.lifts[l] || 0) / bw / STD[l]), 1.5), 0) / lifts.length);
+  const vdotScore = (p.run.vdot - 25) / 45 * 100;
+  const endurance = clamp(0.8 * vdotScore + 0.2 * Math.min(100, (p.run.longMin || 0) / 150 * 100));
+  const recent = S.history.filter(h => h.kind === 'muscu' && now - h.date < 28 * 864e5);
+  const sets = recent.reduce((a, h) => a + h.session.exercises.reduce((b, e) => b + e.sets.filter(t => !t.warmup && t.done).length, 0), 0);
+  const nMuscu = S.history.filter(h => h.kind === 'muscu').length;
+  const muscle = clamp(0.6 * Math.min(100, sets / 2) + 0.4 * Math.min(100, nMuscu / 1.5));
+  const weeks = [];
+  for (let k = 0; k < 8; k++) { const d = new Date(weekKey(now)); d.setDate(d.getDate() - 7 * k); weeks.push(d.toISOString().slice(0, 10)); }
+  const nq = weeklyQuests(p.level).length;
+  const questRate = weeks.reduce((a, w) => a + Math.min(nq, (S.game?.quests?.[w] || []).filter(x => x !== 'perfect').length), 0) / (nq * 8);
+  const tough = S.history.filter(h => h.session.form.level <= 2).length;
+  const mental = clamp(0.4 * Math.min(100, activeStreak(S.history) / 12 * 100) + 0.4 * questRate * 100 + 0.2 * Math.min(100, tough * 10));
+  return { force, endurance, muscle, mental };
+}
+export const STAT_INFO = {
+  force: { label: 'Force', icon: '💪', how: 'Vos maxis (1RM) rapportés à votre poids de corps.' },
+  endurance: { label: 'Endurance', icon: '🫁', how: 'Votre indice de course (allures) et la durée de votre sortie longue.' },
+  muscle: { label: 'Muscle', icon: '🏋️', how: 'Séries de travail des 4 dernières semaines et nombre total de séances muscu.' },
+  mental: { label: 'Mental', icon: '🧠', how: 'Semaines actives d’affilée, quêtes remplies sur 8 semaines, séances faites malgré la fatigue.' },
+};
