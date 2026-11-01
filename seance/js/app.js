@@ -478,6 +478,8 @@ function finish() {
 
 // ---------- Gamification ----------
 function avatar(rankIndex, cls = '') {
+  const st = Manga.stageUrl(rankIndex);
+  if (st) return `<img class="avatar stage ${cls}" src="${st}" alt="Mon personnage, palier ${esc(Game.RANKS[rankIndex].name)}">`;
   const url = Manga.avatarUrl({ ...Game.RANKS[rankIndex], index: rankIndex });
   return url ? `<img class="avatar photo ${cls}" src="${url}" alt="Mon avatar manga">` : heroSvg({ ...Game.RANKS[rankIndex], index: rankIndex }, { cls });
 }
@@ -485,7 +487,7 @@ function miniLevel() {
   const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
   return `<button class="card lvl-mini tap" data-go="#/jeu"><div class="lvl-face">${avatar(R.index)}</div>
     <div class="body"><b>Niveau ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
-    <div class="sub">${L.cur} / ${L.need} XP</div></div><span class="chev">›</span></button>`;
+    <div class="sub">${L.max ? 'Niveau maximal 👑' : `${L.cur} / ${L.need} XP`}</div></div><span class="chev">›</span></button>`;
 }
 function viewGame() {
   header('Progression');
@@ -499,18 +501,17 @@ function viewGame() {
   const daysLeft = Math.max(1, Math.ceil((end - Date.now()) / 864e5));
   $('#app').innerHTML = `
     <div class="panel" style="--rc:${R.color}">
-      <div class="panel-art ${Manga.hasPhoto() ? 'is-photo' : ''}">${avatar(R.index, 'big')}
-        <div class="bubble">${esc(R.quote)}</div>
-        <div class="rank-badge">${R.letter}</div></div>
+      <div class="panel-art ${Manga.hasStages() ? 'is-stage' : Manga.hasPhoto() ? 'is-photo' : ''}">${Manga.hasStages() ? `<div class="stage-bg" style="background-image:url(${Manga.stageUrl(R.index)})"></div>` : ''}${avatar(R.index, 'big')}
+        ${Manga.hasStages() ? '' : `<div class="bubble">${esc(R.quote)}</div><div class="rank-badge">${R.letter}</div>`}</div>
       <div class="panel-info">
         <div class="lvl-num">NIV. <b>${L.level}</b></div>
-        <div class="rank-name">Rang ${R.letter} · ${R.name}</div>
+        <div class="rank-name">Palier ${R.index + 1}/${Game.RANKS.length} · ${R.name}</div>
         <div class="xpbar big"><i style="width:${Math.round(100 * L.cur / L.need)}%"></i></div>
-        <div class="sub">${L.cur} / ${L.need} XP vers le niveau ${L.level + 1} · ${xp.toLocaleString('fr-FR')} XP au total</div>
-        ${R.next ? `<div class="sub">Prochain rang : <b>${R.next.letter} · ${R.next.name}</b> au niveau ${R.next.lvl}</div>` : '<div class="sub">Rang maximal atteint 👑</div>'}
+        <div class="sub">${L.max ? 'Niveau 100 atteint : PAS DE LIMITE !' : `${L.cur.toLocaleString('fr-FR')} / ${L.need.toLocaleString('fr-FR')} XP vers le niveau ${L.level + 1}`} · ${xp.toLocaleString('fr-FR')} XP au total</div>
+        ${R.next ? `<div class="sub">Prochain palier : <b>${R.next.name}</b> au niveau ${R.next.lvl} (encore ${(Game.xpFor(R.next.lvl) - xp).toLocaleString('fr-FR')} XP)</div>` : '<div class="sub">Palier final atteint 👑</div>'}
       </div>
     </div>
-    <button class="btn photo-btn" data-act3="photo">📸 ${Manga.hasPhoto() ? 'Modifier mon avatar' : 'Utiliser ma photo ou une illustration'}</button>
+    <button class="btn photo-btn" data-act3="photo">📸 ${Manga.hasStages() || Manga.hasPhoto() ? 'Modifier mon avatar' : 'Mon avatar : photo, illustration ou planche d’évolution'}</button>
     <div class="stats">
       <div class="stat"><b>🔥 ${streak}</b><span>semaine${streak > 1 ? 's' : ''} active${streak > 1 ? 's' : ''} d’affilée</span></div>
       <div class="stat"><b>${Object.keys(S.game.badges).length} / ${Game.BADGES.length}</b><span>badges</span></div>
@@ -526,9 +527,11 @@ function viewGame() {
     <h2>Badges</h2>
     <div class="badges">${Game.BADGES.map(b => { const t = S.game.badges[b.id];
       return `<div class="badge ${t ? 'got' : ''}"><span>${t ? b.icon : '🔒'}</span><b>${b.name}</b><small>${b.desc}</small></div>`; }).join('')}</div>
-    <h2>Les rangs</h2>
-    <div class="card">${Game.RANKS.map((x, i) => `<div class="row ${i > R.index ? 'locked' : ''}"><span class="rank-chip" style="background:${x.color}">${x.letter}</span>
-      <div class="body"><div class="title">${x.name}</div><div class="sub">À partir du niveau ${x.lvl}</div></div>${i === R.index ? '<span class="pill ok">actuel</span>' : ''}</div>`).join('')}</div>
+    <h2>Les paliers</h2>
+    ${Manga.hasStages() ? `<div class="stages">${Game.RANKS.map((x, i) => `<div class="stage-card ${i > R.index ? 'locked' : ''} ${i === R.index ? 'current' : ''}">
+        <img src="${Manga.stageUrl(i)}" alt=""><div class="stage-lbl"><b>Niv. ${x.lvl}</b>${x.name}</div>${i > R.index ? '<span class="lock">🔒</span>' : ''}</div>`).join('')}</div>`
+      : `<div class="card">${Game.RANKS.map((x, i) => `<div class="row ${i > R.index ? 'locked' : ''}"><span class="rank-chip" style="background:${x.color}">${x.letter}</span>
+      <div class="body"><div class="title">${x.name}</div><div class="sub">À partir du niveau ${x.lvl}</div></div>${i === R.index ? '<span class="pill ok">actuel</span>' : ''}</div>`).join('')}</div>`}
     <p class="hint">XP : séance terminée (+60), chaque série de travail (+5), échauffement complet (+25), minutes de course (+1,5/min), séance de qualité (+25), quêtes et badges en bonus.</p>`;
 }
 
@@ -541,6 +544,12 @@ function photoEditor() {
   const o = Manga.getOpts();
   openSheet('Avatar manga', `<form>
     <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Vous pouvez aussi importer une illustration déjà dessinée (par exemple créée avec une IA d’images) et la garder telle quelle.</p>
+    <div class="card pad sheet-card"><b>🧩 Planche d’évolution</b>
+      <p class="hint" style="margin-top:4px">Une image avec 9 cases (5 en haut, 4 en bas) du niveau 1 au niveau 100 : l’app la découpe et affiche la case correspondant à votre palier.</p>
+      <div class="grid2"><button type="button" class="btn primary" data-ph="sheet">Importer la planche</button>
+      ${Manga.hasStages() ? '<button type="button" class="btn danger" data-ph="delsheet">Retirer</button>' : '<span></span>'}</div>
+      ${Manga.hasStages() ? `<div class="stages mini">${Game.RANKS.map((x, i) => `<img src="${Manga.stageUrl(i)}" alt="${esc(x.name)}">`).join('')}</div>` : ''}</div>
+    <h2>Ou une seule image</h2>
     <div class="grid2"><button type="button" class="btn primary" data-ph="pick">📷 Photo / selfie</button>
       ${src ? '<button type="button" class="btn danger" data-ph="del">Supprimer</button>' : '<span></span>'}</div>
     <div class="ph-wrap" ${src ? '' : 'hidden'}><canvas id="phCanvas" class="ph-canvas"></canvas>
@@ -550,8 +559,8 @@ function photoEditor() {
       <label>Traits</label><input type="range" name="lines" min="0" max="1" step="0.05" value="${o.lines}">
       <label>Ombres et trames</label><input type="range" name="shade" min="0" max="1" step="0.05" value="${o.shade}">
       <button class="btn primary big" type="submit">Utiliser cet avatar</button></div>
-    <input type="file" accept="image/*" id="phFile" hidden></form>`, f => {
-    if (!src) { toast('Choisissez d’abord une photo'); return false; }
+    <input type="file" accept="image/*" id="phFile" hidden><input type="file" accept="image/*" id="sheetFile" hidden></form>`, f => {
+    if (!src) { if (Manga.hasStages()) { viewGame(); return; } toast('Choisissez d’abord une photo'); return false; }
     Manga.savePhoto(src, o).then(() => { toast('Avatar manga enregistré 🔥'); viewGame(); });
   }, 'OK');
   const f = $('#sheet form'), cv = $('#phCanvas');
@@ -567,6 +576,8 @@ function photoEditor() {
   f.addEventListener('click', e => {
     const b = e.target.closest('[data-ph]'); if (!b) return;
     if (b.dataset.ph === 'pick') $('#phFile').click();
+    if (b.dataset.ph === 'sheet') $('#sheetFile').click();
+    if (b.dataset.ph === 'delsheet' && confirm('Retirer la planche d’évolution ?')) { Manga.removeStages(); closeSheet(); viewGame(); }
     if (b.dataset.ph === 'del' && confirm('Supprimer l’image et revenir à l’athlète dessiné ?')) { Manga.removePhoto(); closeSheet(); viewGame(); }
   });
   $('#phFile').addEventListener('change', async e => {
@@ -574,6 +585,17 @@ function photoEditor() {
     busy('Préparation de la photo…');
     try { Object.assign(o, { zoom: 1, dx: 0, dy: 0 }); f.zoom.value = 1; await load(await Manga.fileToPhoto(file)); }
     catch { toast('Photo illisible'); } finally { busy(false); }
+  });
+  $('#sheetFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    busy('Découpage de la planche…');
+    try {
+      const list = await Manga.importSheet(file);
+      Manga.saveStages(list); closeSheet(); viewGame();
+      toast('Planche importée : 9 paliers 🔥');
+    } catch (err) {
+      toast(err?.message === 'format' ? 'Il faut une image carrée avec 9 cases (5 en haut, 4 en bas)' : 'Image illisible');
+    } finally { busy(false); }
   });
   // recadrage au doigt
   let drag = null;
@@ -595,9 +617,9 @@ function celebrate(xp, ev, before) {
   const el = $('#celebrate');
   el.innerHTML = `<div class="cel-box" style="--rc:${R.color}">
     <div class="cel-rays"></div>
-    <div class="cel-title">${rankUp ? 'NOUVEAU RANG !' : up ? 'LEVEL UP !' : 'BIEN JOUÉ !'}</div>
+    <div class="cel-title">${rankUp ? 'NOUVEAU PALIER !' : up ? 'LEVEL UP !' : 'BIEN JOUÉ !'}</div>
     <div class="cel-art">${avatar(R.index, 'big')}</div>
-    ${up ? `<div class="cel-lvl">Niveau ${before} → <b>${L.level}</b>${rankUp ? `<br>Rang ${R.letter} · ${R.name}` : ''}</div>` : `<div class="cel-lvl">Niveau ${L.level} · encore ${L.need - L.cur} XP</div>`}
+    ${up ? `<div class="cel-lvl">Niveau ${before} → <b>${L.level}</b>${rankUp ? `<br>${R.name}` : ''}</div>` : `<div class="cel-lvl">Niveau ${L.level}${L.max ? '' : ` · encore ${L.need - L.cur} XP`}</div>`}
     <div class="cel-xp">+${xp + ev.bonus} XP</div>
     <ul class="cel-list">
       <li>Séance terminée : +${xp} XP</li>

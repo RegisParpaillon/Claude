@@ -181,3 +181,69 @@ export function avatarUrl(rank) {
   }
   return cache[rank.index];
 }
+
+// ---------- Planche d'évolution : une image contenant 9 cases (5 en haut, 4 en bas) ----------
+// Les cases sont découpées sur le téléphone et gardées en privé (une image par palier).
+const STAGES_KEY = 'seance-stages';
+let stages = null;
+try { stages = JSON.parse(localStorage.getItem(STAGES_KEY) || 'null'); } catch { stages = null; }
+export const hasStages = () => Array.isArray(stages) && stages.length === 9;
+export const stageUrl = i => (hasStages() ? stages[Math.min(8, Math.max(0, i))] : null);
+export function removeStages() { localStorage.removeItem(STAGES_KEY); stages = null; }
+
+// Cherche la ligne de séparation sombre la plus proche de la position attendue
+function findSep(lum, expected, span) {
+  let best = expected, bestV = Infinity;
+  for (let x = Math.max(1, expected - span); x <= Math.min(lum.length - 2, expected + span); x++) {
+    const v = lum[x - 1] + lum[x] + lum[x + 1];
+    if (v < bestV) { bestV = v; best = x; }
+  }
+  return best;
+}
+function profile(data, w, y0, y1, axis) {
+  // axis 'x' : luminosité moyenne de chaque colonne entre y0 et y1
+  const out = new Float32Array(w);
+  for (let y = y0; y < y1; y += 2) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4; out[x] += data[i] + data[i + 1] + data[i + 2];
+  }
+  void axis;
+  return out;
+}
+
+export async function importSheet(file) {
+  const url = URL.createObjectURL(file);
+  let i;
+  try { i = await loadImage(url); } finally { URL.revokeObjectURL(url); }
+  const w = i.naturalWidth, h = i.naturalHeight;
+  if (Math.abs(w / h - 1) > 0.15) throw new Error('format');
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(i, 0, 0);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  // ligne horizontale entre les deux rangées (attendue vers 51 %)
+  const rows = new Float32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x += 2) { const k = (y * w + x) * 4; rows[y] += data[k] + data[k + 1] + data[k + 2]; }
+  const ySep = findSep(rows, Math.round(h * 0.51), Math.round(h * 0.04));
+  const top = profile(data, w, Math.round(h * 0.08), Math.round(h * 0.45));
+  const bot = profile(data, w, Math.round(h * 0.58), Math.round(h * 0.95));
+  const span = Math.round(w * 0.03);
+  const tx = [0, ...[0.2, 0.4, 0.6, 0.8].map(f => findSep(top, Math.round(w * f), span)), w];
+  const bx = [0, ...[0.206, 0.426, 0.639].map(f => findSep(bot, Math.round(w * f), span)), w];
+  const m = Math.round(w * 0.006);           // marge pour enlever les traits de séparation
+  const cut = (x0, x1, y0, y1) => {
+    const o = document.createElement('canvas');
+    const cw = x1 - x0 - 2 * m, ch = y1 - y0 - 2 * m;
+    const s = Math.min(1, 520 / ch);
+    o.width = Math.round(cw * s); o.height = Math.round(ch * s);
+    o.getContext('2d').drawImage(c, x0 + m, y0 + m, cw, ch, 0, 0, o.width, o.height);
+    return o.toDataURL('image/jpeg', 0.88);
+  };
+  const out = [];
+  for (let k = 0; k < 5; k++) out.push(cut(tx[k], tx[k + 1], 0, ySep));
+  for (let k = 0; k < 4; k++) out.push(cut(bx[k], bx[k + 1], ySep, h));
+  return out;
+}
+export function saveStages(list) {
+  localStorage.setItem(STAGES_KEY, JSON.stringify(list));
+  stages = list;
+}

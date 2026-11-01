@@ -134,7 +134,7 @@ export function heroSvg(rank, opts = {}) {
     <path d="M200,176 C190,194 178,198 166,196 M200,176 C210,194 222,198 234,196" fill="none" stroke="${NV2}" stroke-width="2.5"/>
     <path d="M200,200 L200,262 M184,226 C194,230 206,230 216,226 M186,248 C196,252 204,252 214,248" fill="none" stroke="${NV2}" stroke-width="2"/>
     <path d="M232,170 C232,200 230,230 230,262" fill="none" stroke="${NV2}" stroke-width="6" opacity=".7"/>
-    <text x="200" y="${lvl >= 6 ? 220 : 224}" text-anchor="middle" font-size="${lvl >= 6 ? 20 : 26}" font-weight="900" font-style="italic" fill="${au}" stroke="${OL}" stroke-width="1" font-family="Impact, Arial Black, sans-serif">${rank.letter}</text>
+    <text x="200" y="${rank.letter.length > 1 ? 220 : 224}" text-anchor="middle" font-size="${rank.letter.length > 2 ? 15 : rank.letter.length > 1 ? 20 : 26}" font-weight="900" font-style="italic" fill="${au}" stroke="${OL}" stroke-width="1" font-family="Impact, Arial Black, sans-serif">${rank.letter}</text>
     <!-- cou et trapèzes -->
     <path d="M184,124 L216,124 L218,146 L182,146Z" fill="${SK}"/>
     <path d="M182,138 C176,142 172,146 168,148 L176,150 C184,146 190,146 192,146 M218,138 C224,142 228,146 232,148 L224,150 C216,146 210,146 208,146" fill="${SK}"/>
