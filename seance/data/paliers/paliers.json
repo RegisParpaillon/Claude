@@ -1,0 +1,41 @@
+{
+ "description": "Image du personnage pour chaque palier. Pour changer une image, remplacez le fichier par un autre portant le même nom.",
+ "paliers": [
+  {
+   "niveau": 1,
+   "image": "niveau-001.jpg"
+  },
+  {
+   "niveau": 20,
+   "image": "niveau-020.jpg"
+  },
+  {
+   "niveau": 40,
+   "image": "niveau-040.jpg"
+  },
+  {
+   "niveau": 60,
+   "image": "niveau-060.jpg"
+  },
+  {
+   "niveau": 80,
+   "image": "niveau-080.jpg"
+  },
+  {
+   "niveau": 90,
+   "image": "niveau-090.jpg"
+  },
+  {
+   "niveau": 95,
+   "image": "niveau-095.jpg"
+  },
+  {
+   "niveau": 98,
+   "image": "niveau-098.jpg"
+  },
+  {
+   "niveau": 100,
+   "image": "niveau-100.jpg"
+  }
+ ]
+}
