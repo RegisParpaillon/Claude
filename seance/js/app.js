@@ -4,6 +4,7 @@ import { generateMuscu, swapAccessory, applyMuscuProgress, roundLoad, unitOf, is
 import { generateRun, applyRunProgress, paces, vdotFrom, fmtPace, fmtDur, kmh, predictTime, QUALITY, QUALITY_ORDER, START_LEVEL, LONG_START } from './run.js';
 import * as Timer from './timer.js';
 import * as Game from './game.js';
+import * as Manga from './manga.js';
 import { askClaude, toSession, getApiKey, setApiKey, testApiKey } from './ai.js';
 
 // ---------- Données ----------
@@ -475,9 +476,13 @@ function finish() {
 }
 
 // ---------- Gamification ----------
+function avatar(rankIndex, cls = '') {
+  const url = Manga.avatarUrl({ ...Game.RANKS[rankIndex], index: rankIndex });
+  return url ? `<img class="avatar photo ${cls}" src="${url}" alt="Mon avatar manga">` : Game.avatarSvg(rankIndex, { cls });
+}
 function miniLevel() {
   const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
-  return `<button class="card lvl-mini tap" data-go="#/jeu"><div class="lvl-face">${Game.avatarSvg(R.index)}</div>
+  return `<button class="card lvl-mini tap" data-go="#/jeu"><div class="lvl-face">${avatar(R.index)}</div>
     <div class="body"><b>Niveau ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
     <div class="sub">${L.cur} / ${L.need} XP</div></div><span class="chev">›</span></button>`;
 }
@@ -493,7 +498,7 @@ function viewGame() {
   const daysLeft = Math.max(1, Math.ceil((end - Date.now()) / 864e5));
   $('#app').innerHTML = `
     <div class="panel" style="--rc:${R.color}">
-      <div class="panel-art">${Game.avatarSvg(R.index, { cls: 'big' })}
+      <div class="panel-art ${Manga.hasPhoto() ? 'is-photo' : ''}">${avatar(R.index, 'big')}
         <div class="bubble">${esc(R.quote)}</div>
         <div class="rank-badge">${R.letter}</div></div>
       <div class="panel-info">
@@ -504,6 +509,7 @@ function viewGame() {
         ${R.next ? `<div class="sub">Prochain rang : <b>${R.next.letter} · ${R.next.name}</b> au niveau ${R.next.lvl}</div>` : '<div class="sub">Rang maximal atteint 👑</div>'}
       </div>
     </div>
+    <button class="btn photo-btn" data-act3="photo">📸 ${Manga.hasPhoto() ? 'Modifier mon avatar manga' : 'Créer mon avatar manga à partir d’une photo'}</button>
     <div class="stats">
       <div class="stat"><b>🔥 ${streak}</b><span>semaine${streak > 1 ? 's' : ''} active${streak > 1 ? 's' : ''} d’affilée</span></div>
       <div class="stat"><b>${Object.keys(S.game.badges).length} / ${Game.BADGES.length}</b><span>badges</span></div>
@@ -525,6 +531,59 @@ function viewGame() {
     <p class="hint">XP : séance terminée (+60), chaque série de travail (+5), échauffement complet (+25), minutes de course (+1,5/min), séance de qualité (+25), quêtes et badges en bonus.</p>`;
 }
 
+$('#app').addEventListener('click', e => { if (e.target.closest('[data-act3=photo]')) photoEditor(); });
+
+function photoEditor() {
+  const R = Game.rankOf(Game.levelOf(Game.totalXp(S)).level);
+  let src = Manga.hasPhoto() ? localStorage.getItem('seance-photo') : null;
+  let srcImg = null;
+  const o = Manga.getOpts();
+  openSheet('Avatar manga', `<form>
+    <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Les effets évoluent avec votre rang.</p>
+    <div class="grid2"><button type="button" class="btn primary" data-ph="pick">📷 Photo / selfie</button>
+      ${src ? '<button type="button" class="btn danger" data-ph="del">Supprimer</button>' : '<span></span>'}</div>
+    <div class="ph-wrap" ${src ? '' : 'hidden'}><canvas id="phCanvas" class="ph-canvas"></canvas>
+      <p class="hint">Glissez l’image pour la recadrer.</p>
+      <label>Zoom</label><input type="range" name="zoom" min="1" max="3" step="0.05" value="${o.zoom}">
+      <label>Traits</label><input type="range" name="lines" min="0" max="1" step="0.05" value="${o.lines}">
+      <label>Ombres et trames</label><input type="range" name="shade" min="0" max="1" step="0.05" value="${o.shade}">
+      <button class="btn primary big" type="submit">Utiliser cet avatar</button></div>
+    <input type="file" accept="image/*" id="phFile" hidden></form>`, f => {
+    if (!src) { toast('Choisissez d’abord une photo'); return false; }
+    Manga.savePhoto(src, o).then(() => { toast('Avatar manga enregistré 🔥'); viewGame(); });
+  }, 'OK');
+  const f = $('#sheet form'), cv = $('#phCanvas');
+  let timer = null;
+  const full = () => { if (srcImg) Manga.renderTo(cv, srcImg, o, R); };
+  const later = () => { clearTimeout(timer); timer = setTimeout(full, 120); };
+  const load = async url => { src = url; srcImg = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; }); f.querySelector('.ph-wrap').hidden = false; full(); };
+  if (src) load(src);
+  f.addEventListener('input', e => { if (o[e.target.name] != null) { o[e.target.name] = +e.target.value; later(); } });
+  f.addEventListener('click', e => {
+    const b = e.target.closest('[data-ph]'); if (!b) return;
+    if (b.dataset.ph === 'pick') $('#phFile').click();
+    if (b.dataset.ph === 'del' && confirm('Supprimer la photo et revenir à l’avatar dessiné ?')) { Manga.removePhoto(); closeSheet(); viewGame(); }
+  });
+  $('#phFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    busy('Préparation de la photo…');
+    try { Object.assign(o, { zoom: 1, dx: 0, dy: 0 }); f.zoom.value = 1; await load(await Manga.fileToPhoto(file)); }
+    catch { toast('Photo illisible'); } finally { busy(false); }
+  });
+  // recadrage au doigt
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { if (!srcImg) return; drag = { x: e.clientX, y: e.clientY, dx: o.dx, dy: o.dy }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const w = cv.getBoundingClientRect().width;
+    o.dx = Math.max(-1, Math.min(1, drag.dx - (e.clientX - drag.x) / w * 2));
+    o.dy = Math.max(-1, Math.min(1, drag.dy - (e.clientY - drag.y) / w * 2));
+    Manga.drawCrop(cv.getContext('2d'), srcImg, o);
+  });
+  const end = () => { if (drag) { drag = null; full(); } };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+}
+
 function celebrate(xp, ev, before) {
   const total = Game.totalXp(S), L = Game.levelOf(total), R = Game.rankOf(L.level);
   const up = L.level > before, rankUp = Game.rankOf(before).index < R.index;
@@ -532,7 +591,7 @@ function celebrate(xp, ev, before) {
   el.innerHTML = `<div class="cel-box" style="--rc:${R.color}">
     <div class="cel-rays"></div>
     <div class="cel-title">${rankUp ? 'NOUVEAU RANG !' : up ? 'LEVEL UP !' : 'BIEN JOUÉ !'}</div>
-    <div class="cel-art">${Game.avatarSvg(R.index, { cls: 'big' })}</div>
+    <div class="cel-art">${avatar(R.index, 'big')}</div>
     ${up ? `<div class="cel-lvl">Niveau ${before} → <b>${L.level}</b>${rankUp ? `<br>Rang ${R.letter} · ${R.name}` : ''}</div>` : `<div class="cel-lvl">Niveau ${L.level} · encore ${L.need - L.cur} XP</div>`}
     <div class="cel-xp">+${xp + ev.bonus} XP</div>
     <ul class="cel-list">
@@ -772,5 +831,5 @@ Timer.setListener(t => { if (t) requestWake(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (S.current || Timer.current())) requestWake(); });
 
 Timer.restore();
-render();
+Manga.init().finally(render);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

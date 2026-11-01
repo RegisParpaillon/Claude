@@ -330,3 +330,12 @@ body.has-tabs { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .cel-list { text-align: left; font-size: 14px; margin: 6px 0 4px; padding-left: 18px; }
 .cel-box .btn.primary { background: #111827; color: #fff; }
 .timer:not(.show) { visibility: hidden; transition: transform .25s ease, visibility 0s .25s; }
+.avatar.photo { object-fit: cover; aspect-ratio: 4 / 5; }
+.lvl-face img.photo { width: 100%; height: 100%; object-position: 50% 25%; }
+.panel-art .avatar.photo { max-height: none; }
+.cel-art .avatar.photo { display: block; width: 100%; }
+.photo-btn { margin: 0 0 12px; }
+.ph-canvas { display: block; width: 100%; margin-top: 12px; border-radius: 6px; touch-action: none; background: #fff; }
+.ph-wrap[hidden] { display: none; }
+.panel-art.is-photo .bubble { top: auto; bottom: 14px; left: 14px; max-width: 62%; }
+.panel-art.is-photo .bubble::after { right: auto; left: 22px; bottom: auto; top: -16px; border: 8px solid transparent; border-bottom: 14px solid #111827; }

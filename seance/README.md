@@ -42,7 +42,11 @@ dans le profil (quelques centimes par séance, la clé reste sur le téléphone)
 
 **Progression 🏆 (gamification)**
 - XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
-- Niveaux et rangs E → D → C → B → A → S → SS, avec un avatar style manga qui évolue (aura, couleur, carrure).
+- Niveaux et rangs E → D → C → B → A → S → SS.
+- **Avatar manga à partir d'une photo ou d'un selfie** : la photo est transformée en case de manga sur le
+  téléphone (traits à l'encre, trames de points, aplats noirs, lignes de vitesse et cadre aux couleurs du rang),
+  avec recadrage au doigt et réglage des traits et des ombres. Rien n'est envoyé sur internet. Les effets
+  s'intensifient avec le rang. Sans photo, un avatar dessiné est affiché.
 - Quêtes hebdomadaires adaptées au niveau (séances muscu, sorties running, fractionné, sortie longue,
   échauffement complet) et bonus « semaine parfaite ».
 - 14 badges (premier pas, vague domptée, record, 10 000 kg en une séance, 200 km courus, série de semaines…).

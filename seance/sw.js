@@ -1,7 +1,7 @@
 // Cache hors ligne : réseau en priorité, cache en secours.
-const CACHE = 'seance-v2';
+const CACHE = 'seance-v3';
 const FILES = ['./', 'index.html', 'style.css', 'js/app.js', 'js/data.js', 'js/forme.js', 'js/muscu.js', 'js/run.js',
-  'js/timer.js', 'js/game.js', 'js/ai.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+  'js/timer.js', 'js/game.js', 'js/ai.js', 'js/manga.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
