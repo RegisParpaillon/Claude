@@ -552,9 +552,9 @@ function photoEditor() {
   openSheet('Avatar manga', `<form>
     <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Vous pouvez aussi importer une illustration déjà dessinée (par exemple créée avec une IA d’images) et la garder telle quelle.</p>
     <div class="card pad sheet-card"><b>🧩 Planche d’évolution</b>
-      <p class="hint" style="margin-top:4px">Une image avec 9 cases (5 en haut, 4 en bas) du niveau 1 au niveau 100 : l’app la découpe et affiche la case correspondant à votre palier.</p>
-      <div class="grid2"><button type="button" class="btn primary" data-ph="sheet">Importer la planche</button>
-      ${Manga.hasStages() ? '<button type="button" class="btn danger" data-ph="delsheet">Retirer</button>' : '<span></span>'}</div>
+      <p class="hint" style="margin-top:4px">${Manga.hasLocalStages() ? 'Planche importée sur ce téléphone (elle remplace celle du site).' : Manga.hasStages() ? 'Les images du site (dossier data/paliers) sont utilisées. Vous pouvez importer une autre planche sur ce téléphone :' : 'Une image avec 9 cases (5 en haut, 4 en bas) du niveau 1 au niveau 100 : l’app la découpe et affiche la case correspondant à votre palier.'}</p>
+      <div class="grid2"><button type="button" class="btn primary" data-ph="sheet">Importer une planche</button>
+      ${Manga.hasLocalStages() ? '<button type="button" class="btn danger" data-ph="delsheet">Retirer</button>' : '<span></span>'}</div>
       ${Manga.hasStages() ? `<div class="stages mini">${Game.RANKS.map((x, i) => `<img src="${Manga.stageUrl(i)}" alt="${esc(x.name)}">`).join('')}</div>` : ''}</div>
     <h2>Ou une seule image</h2>
     <div class="grid2"><button type="button" class="btn primary" data-ph="pick">📷 Photo / selfie</button>
@@ -584,7 +584,7 @@ function photoEditor() {
     const b = e.target.closest('[data-ph]'); if (!b) return;
     if (b.dataset.ph === 'pick') $('#phFile').click();
     if (b.dataset.ph === 'sheet') $('#sheetFile').click();
-    if (b.dataset.ph === 'delsheet' && confirm('Retirer la planche d’évolution ?')) { Manga.removeStages(); closeSheet(); viewGame(); }
+    if (b.dataset.ph === 'delsheet' && confirm('Retirer la planche importée sur ce téléphone ?')) { Manga.removeStages(); closeSheet(); viewGame(); }
     if (b.dataset.ph === 'del' && confirm('Supprimer l’image et revenir à l’athlète dessiné ?')) { Manga.removePhoto(); closeSheet(); viewGame(); }
   });
   $('#phFile').addEventListener('change', async e => {
@@ -865,5 +865,5 @@ Timer.setListener(t => { if (t) requestWake(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && (S.current || Timer.current())) requestWake(); });
 
 Timer.restore();
-Manga.init().finally(render);
+Promise.all([Manga.init(), Manga.loadBuiltinStages()]).finally(render);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

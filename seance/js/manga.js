@@ -187,8 +187,21 @@ export function avatarUrl(rank) {
 const STAGES_KEY = 'seance-stages';
 let stages = null;
 try { stages = JSON.parse(localStorage.getItem(STAGES_KEY) || 'null'); } catch { stages = null; }
-export const hasStages = () => Array.isArray(stages) && stages.length === 9;
-export const stageUrl = i => (hasStages() ? stages[Math.min(8, Math.max(0, i))] : null);
+// Images intégrées au site : data/paliers/paliers.json (une image par palier, choisie selon le niveau)
+let builtin = null;
+export async function loadBuiltinStages() {
+  try {
+    const r = await fetch('data/paliers/paliers.json', { cache: 'no-cache' });
+    if (!r.ok) return;
+    const j = await r.json();
+    const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/paliers/${p.image}`);
+    if (list.length === 9) builtin = list;
+  } catch { /* hors ligne au premier lancement : on garde l'avatar dessiné */ }
+}
+const localStages = () => (Array.isArray(stages) && stages.length === 9 ? stages : null);
+export const hasLocalStages = () => !!localStages();
+export const hasStages = () => !!(localStages() || builtin);
+export const stageUrl = i => { const l = localStages() || builtin; return l ? l[Math.min(8, Math.max(0, i))] : null; };
 export function removeStages() { localStorage.removeItem(STAGES_KEY); stages = null; }
 
 // Cherche la ligne de séparation sombre la plus proche de la position attendue

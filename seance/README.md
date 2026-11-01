@@ -44,7 +44,10 @@ dans le profil (quelques centimes par séance, la clé reste sur le téléphone)
 - XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
 - Niveaux 1 à 100 en 9 paliers : Débutant (1), En progression (20), Plus fort (40), Très performant (60),
   Athlète confirmé (80), Elite (90), Légende (95), Surhumain (98), Parfait (100).
-- **Planche d'évolution** : importez une image de 9 cases (5 en haut, 4 en bas, par exemple créée avec
+- **Images des paliers dans `seance/data/paliers/`** : `niveau-001.jpg`, `niveau-020.jpg`, … `niveau-100.jpg`
+  (listées dans `paliers.json`). Le site affiche automatiquement l'image du palier atteint. Pour changer une
+  image, remplacez le fichier par un autre portant le même nom.
+- **Planche d'évolution** (facultatif, pour remplacer les images du site sur un téléphone) : importez une image de 9 cases (5 en haut, 4 en bas, par exemple créée avec
   ChatGPT) ; l'app la découpe sur le téléphone et affiche la case de votre palier. Les paliers suivants
   restent masqués jusqu'à ce qu'ils soient atteints.
 - **Stats du personnage** calculées sur vos vraies données et affichées sur l'image :
