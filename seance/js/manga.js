@@ -4,7 +4,7 @@
 const PHOTO_KEY = 'seance-photo';
 const OPTS_KEY = 'seance-photo-opts';
 export const W = 480, H = 600;                       // format portrait 4:5
-const DEFAULT_OPTS = { lines: 0.5, shade: 0.5, zoom: 1, dx: 0, dy: 0 };
+const DEFAULT_OPTS = { lines: 0.5, shade: 0.5, zoom: 1, dx: 0, dy: 0, raw: false };
 
 let img = null;            // photo source décodée
 let cache = {};            // rendu par rang
@@ -162,6 +162,11 @@ export function renderTo(canvas, source, o, rank) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   drawCrop(ctx, source, o);
+  if (o.raw) {   // illustration importée : seulement le cadre du rang
+    ctx.lineWidth = 10; ctx.strokeStyle = '#000'; ctx.strokeRect(5, 5, W - 10, H - 10);
+    ctx.lineWidth = 4; ctx.strokeStyle = rank.color; ctx.strokeRect(12, 12, W - 24, H - 24);
+    return;
+  }
   mangaFilter(ctx, o);
   panelFx(ctx, rank);
 }

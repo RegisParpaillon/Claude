@@ -5,6 +5,7 @@ import { generateRun, applyRunProgress, paces, vdotFrom, fmtPace, fmtDur, kmh, p
 import * as Timer from './timer.js';
 import * as Game from './game.js';
 import * as Manga from './manga.js';
+import { heroSvg } from './hero.js';
 import { askClaude, toSession, getApiKey, setApiKey, testApiKey } from './ai.js';
 
 // ---------- Données ----------
@@ -478,7 +479,7 @@ function finish() {
 // ---------- Gamification ----------
 function avatar(rankIndex, cls = '') {
   const url = Manga.avatarUrl({ ...Game.RANKS[rankIndex], index: rankIndex });
-  return url ? `<img class="avatar photo ${cls}" src="${url}" alt="Mon avatar manga">` : Game.avatarSvg(rankIndex, { cls });
+  return url ? `<img class="avatar photo ${cls}" src="${url}" alt="Mon avatar manga">` : heroSvg({ ...Game.RANKS[rankIndex], index: rankIndex }, { cls });
 }
 function miniLevel() {
   const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
@@ -509,7 +510,7 @@ function viewGame() {
         ${R.next ? `<div class="sub">Prochain rang : <b>${R.next.letter} · ${R.next.name}</b> au niveau ${R.next.lvl}</div>` : '<div class="sub">Rang maximal atteint 👑</div>'}
       </div>
     </div>
-    <button class="btn photo-btn" data-act3="photo">📸 ${Manga.hasPhoto() ? 'Modifier mon avatar manga' : 'Créer mon avatar manga à partir d’une photo'}</button>
+    <button class="btn photo-btn" data-act3="photo">📸 ${Manga.hasPhoto() ? 'Modifier mon avatar' : 'Utiliser ma photo ou une illustration'}</button>
     <div class="stats">
       <div class="stat"><b>🔥 ${streak}</b><span>semaine${streak > 1 ? 's' : ''} active${streak > 1 ? 's' : ''} d’affilée</span></div>
       <div class="stat"><b>${Object.keys(S.game.badges).length} / ${Game.BADGES.length}</b><span>badges</span></div>
@@ -539,11 +540,12 @@ function photoEditor() {
   let srcImg = null;
   const o = Manga.getOpts();
   openSheet('Avatar manga', `<form>
-    <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Les effets évoluent avec votre rang.</p>
+    <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Vous pouvez aussi importer une illustration déjà dessinée (par exemple créée avec une IA d’images) et la garder telle quelle.</p>
     <div class="grid2"><button type="button" class="btn primary" data-ph="pick">📷 Photo / selfie</button>
       ${src ? '<button type="button" class="btn danger" data-ph="del">Supprimer</button>' : '<span></span>'}</div>
     <div class="ph-wrap" ${src ? '' : 'hidden'}><canvas id="phCanvas" class="ph-canvas"></canvas>
       <p class="hint">Glissez l’image pour la recadrer.</p>
+      <label class="check inline"><input type="checkbox" name="raw" ${o.raw ? 'checked' : ''}><span>Illustration : garder l’image telle quelle (sans filtre manga)</span></label>
       <label>Zoom</label><input type="range" name="zoom" min="1" max="3" step="0.05" value="${o.zoom}">
       <label>Traits</label><input type="range" name="lines" min="0" max="1" step="0.05" value="${o.lines}">
       <label>Ombres et trames</label><input type="range" name="shade" min="0" max="1" step="0.05" value="${o.shade}">
@@ -558,11 +560,14 @@ function photoEditor() {
   const later = () => { clearTimeout(timer); timer = setTimeout(full, 120); };
   const load = async url => { src = url; srcImg = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; }); f.querySelector('.ph-wrap').hidden = false; full(); };
   if (src) load(src);
-  f.addEventListener('input', e => { if (o[e.target.name] != null) { o[e.target.name] = +e.target.value; later(); } });
+  f.addEventListener('input', e => {
+    if (e.target.name === 'raw') { o.raw = e.target.checked; return later(); }
+    if (o[e.target.name] != null) { o[e.target.name] = +e.target.value; later(); }
+  });
   f.addEventListener('click', e => {
     const b = e.target.closest('[data-ph]'); if (!b) return;
     if (b.dataset.ph === 'pick') $('#phFile').click();
-    if (b.dataset.ph === 'del' && confirm('Supprimer la photo et revenir à l’avatar dessiné ?')) { Manga.removePhoto(); closeSheet(); viewGame(); }
+    if (b.dataset.ph === 'del' && confirm('Supprimer l’image et revenir à l’athlète dessiné ?')) { Manga.removePhoto(); closeSheet(); viewGame(); }
   });
   $('#phFile').addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
