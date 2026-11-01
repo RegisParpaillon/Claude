@@ -3,6 +3,8 @@ import { FORM_QUESTIONS, readiness } from './forme.js';
 import { generateMuscu, swapAccessory, applyMuscuProgress, roundLoad, unitOf, isLoaded, epley } from './muscu.js';
 import { generateRun, applyRunProgress, paces, vdotFrom, fmtPace, fmtDur, kmh, predictTime, QUALITY, QUALITY_ORDER, START_LEVEL, LONG_START } from './run.js';
 import * as Timer from './timer.js';
+import * as Game from './game.js';
+import { askClaude, toSession, getApiKey, setApiKey, testApiKey } from './ai.js';
 
 // ---------- Données ----------
 const KEY = 'seance-app-v1';
@@ -16,12 +18,12 @@ function blank() {
     profile: { setup: false, level: 'inter', bodyweight: 75, lifts: {}, wave: {}, fails: {}, acc: {},
       run: { vdot: 40, refDist: 5000, refTime: null, longMin: 60, longCount: 0, qualCount: 0, qLevel: {} },
       eq: ['barre', 'rack', 'banc', 'halteres', 'poulie', 'machines', 'traction'], lastForm: null },
-    rot: 0, current: null, history: [],
+    rot: 0, current: null, history: [], game: Game.blankGame(),
   };
 }
 let S = load();
 function load() {
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.profile) return s; } catch { /* */ }
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.profile) { s.game ||= Game.blankGame(); return s; } } catch { /* */ }
   return blank();
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
@@ -68,7 +70,19 @@ window.addEventListener('hashchange', render);
 function header(title, back) {
   $('#hdr').innerHTML = back
     ? `<button class="back" data-go="${back}">‹ Retour</button><h1 class="small">${title}</h1>`
-    : `<h1>${title}</h1><button class="icon-btn" data-go="#/historique" aria-label="Historique">🗓️</button><button class="icon-btn" data-go="#/profil" aria-label="Profil">👤</button>`;
+    : `<h1>${title}</h1>`;
+}
+const TABS = [['', '🏠', 'Séances'], ['jeu', '🏆', 'Progression'], ['historique', '🗓️', 'Historique'], ['profil', '👤', 'Profil']];
+function tabs(active) {
+  const nav = $('#tabs');
+  if (active == null) { nav.classList.remove('show'); document.body.classList.remove('has-tabs'); return; }
+  nav.classList.add('show'); document.body.classList.add('has-tabs');
+  nav.innerHTML = TABS.map(([k, i, l]) => `<button class="${k === active ? 'on' : ''}" data-go="#/${k}"><span>${i}</span>${l}</button>`).join('');
+}
+function busy(msg) {
+  const b = $('#busy');
+  if (msg === false) return b.classList.remove('show');
+  b.querySelector('span').textContent = msg; b.classList.add('show');
 }
 
 function render() {
@@ -76,7 +90,11 @@ function render() {
   if (!P().setup && h !== 'profil') return go('#/profil');
   window.scrollTo(0, 0);
   const [r, arg] = h.split('/');
+  const tab = r === 'h' ? 'historique' : r;
+  tabs(['', 'jeu', 'historique', 'profil'].includes(tab) && P().setup ? tab : null);
   if (r === 'profil') return viewProfile();
+  if (r === 'jeu') return viewGame();
+  if (r === 'libre') return viewFreeForm();
   if (r === 'muscu') return viewMuscuForm();
   if (r === 'run') return viewRunForm();
   if (r === 'seance') return S.current ? viewSession() : go('#/');
@@ -100,6 +118,8 @@ function viewHome() {
       <button class="choice tap" data-go="#/muscu"><span class="ce">🏋️</span><b>Muscu</b><span class="sub">Prochaine : ${r.label}</span></button>
       <button class="choice tap" data-go="#/run"><span class="ce">🏃</span><b>Running</b><span class="sub">Prochain fractionné : ${QUALITY[q].short}</span></button>
     </div>
+    <button class="card free tap" data-go="#/libre"><span class="ce">✨</span><div><b>Demande libre</b><div class="sub">« 40 min haut du corps avec haltères, genou fragile »</div></div><span class="chev">›</span></button>
+    ${miniLevel()}
     <h2>Cette semaine</h2>
     <div class="stats">
       <div class="stat"><b>${week.filter(x => x.kind === 'muscu').length}</b><span>séance(s) muscu</span></div>
@@ -118,7 +138,6 @@ function viewHome() {
     </div>
     <h2>Dernières séances</h2>
     ${histList(S.history.slice(0, 5))}
-    ${S.history.length > 5 ? '<button class="btn" data-go="#/historique">Tout l’historique</button>' : ''}
     ${installHint()}`;
 }
 const paceRow = (t, v, s) => `<div class="row"><div class="body"><div class="title">${t}</div><div class="sub">${s}</div></div><div class="right"><b class="big">${v}</b><div class="sub">/km</div></div></div>`;
@@ -249,7 +268,8 @@ function muscuHtml(s, fb) {
   const total = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.warmup).length, 0);
   const done = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.warmup && x.done).length, 0);
   return `${fb}
-    <p class="muted">${s.duration} min · ${s.exercises.length} exercices · ${done}/${total} séries faites</p>
+    ${s.intro ? `<div class="banner ai">✨ ${esc(s.intro)}</div>` : ''}
+    <p class="muted">${s.duration ? `${s.duration} min · ` : ''}${s.exercises.length} exercices · ${done}/${total} séries faites</p>
     <h2>1 · Échauffement articulaire</h2><div class="card">${wu(s.warmup.articulaire, 'a')}</div>
     <h2>2 · Mobilité spécifique</h2><div class="card">${wu(s.warmup.mobilite, 'm')}</div>
     <h2>3 · Séance</h2>
@@ -294,11 +314,14 @@ function runHtml(s, fb) {
     else if (st.kind === 'ef') groups.push({ kind: 'ef', st });
     else groups.push({ kind: 'block', items: [st] });
   }
+  const effort = s.type === 'libre' ? (s.steps.find(x => x.kind === 'work') || s.steps[0])?.pace || ''
+    : s.type === 'fractionne' ? fmtPace(s.sub === 'seuil' ? p.seuil : s.sub === 'courte' ? p.vma : p.interval) : `${fmtPace(p.efFast)}–${fmtPace(p.efSlow)}`;
   return `${fb}
+    ${s.intro ? `<div class="banner ai">✨ ${esc(s.intro)}</div>` : ''}
     ${s.notes.map(n => `<div class="banner">${esc(n)}</div>`).join('')}
     <div class="stats big-stats">
       <div class="stat"><b>${fmtDur(s.totalSec)}</b><span>durée cible</span></div>
-      <div class="stat"><b>${s.type === 'fractionne' ? fmtPace(s.sub === 'seuil' ? p.seuil : s.sub === 'courte' ? p.vma : p.interval) : `${fmtPace(p.efFast)}–${fmtPace(p.efSlow)}`}</b><span>allure ${s.type === 'fractionne' ? 'des efforts' : 'EF'} /km${s.km ? ` · ≈ ${s.km.toFixed(1).replace('.', ',')} km` : ''}</span></div>
+      <div class="stat"><b>${esc(effort.replace(' /km', ''))}</b><span>allure ${s.type === 'long' || s.type === 'footing' ? 'EF' : 'des efforts'} /km${s.km ? ` · ≈ ${s.km.toFixed(1).replace('.', ',')} km` : ''}</span></div>
     </div>
     ${s.desc ? `<div class="card pad desc"><b>Corps de séance</b><br>${esc(s.desc)}</div>` : ''}
     <h2>Déroulé</h2>
@@ -421,32 +444,157 @@ function finish() {
     <label>Notes</label><textarea name="notes" placeholder="Sensations, douleurs, matériel…"></textarea>
     <button class="btn primary" type="submit">Enregistrer la séance</button></form>`, f => {
     const feel = +f.feel.value;
-    let msgs, summary, km = null;
+    let msgs, summary, km = null, min = null, vol = 0;
     if (s.kind === 'muscu') {
       if (feel === 4) s.progress = false; // séance vécue comme très dure : on ne monte pas
-      msgs = applyMuscuProgress(P(), s);
+      msgs = s.ai ? ['Séance sur mesure : le programme de base n’est pas modifié.'] : applyMuscuProgress(P(), s);
       const n = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.warmup && x.done).length, 0);
-      const vol = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.warmup && x.done && x.w).reduce((b, x) => b + x.w * (x.got ?? x.reps) * (e.type === 'db' ? 2 : 1), 0), 0);
+      vol = s.exercises.reduce((a, e) => a + e.sets.filter(x => !x.warmup && x.done && x.w).reduce((b, x) => b + x.w * (x.got ?? x.reps) * (e.type === 'db' ? 2 : 1), 0), 0);
       summary = `${n} séries · ${Math.round(vol).toLocaleString('fr-FR')} kg soulevés`;
       // la rotation avance seulement si on a fait la séance prévue
       if (s.rot === S.rot % ROTATION.length) S.rot = (S.rot + 1) % ROTATION.length;
     } else {
       msgs = applyRunProgress(P(), s, feel);
       km = num(f.km.value) ?? s.km ?? null;
-      const min = num(f.min.value) ?? Math.round(s.totalSec / 60);
+      min = num(f.min.value) ?? Math.round(s.totalSec / 60);
       summary = `${min} min${km ? ` · ${kg(km.toFixed(1))} km` : ''}`;
     }
-    const entry = { id: s.id, date: Date.now(), kind: s.kind, title: s.title, summary, km, feel: feels.find(x => x[0] === feel)[1],
-      notes: f.notes.value.trim(), msgs, session: s };
-    S.history.unshift(entry); S.current = null; Timer.stop(); save();
+    const wu = s.warmup ? [...s.warmup.articulaire, ...s.warmup.mobilite].length : 0;
+    const entry = { id: s.id, date: Date.now(), kind: s.kind, title: s.title, summary, km, min, vol: Math.round(vol),
+      feel: feels.find(x => x[0] === feel)[1], notes: f.notes.value.trim(), msgs, session: s,
+      wuComplete: s.kind === 'muscu' && wu > 0 && Object.values(s.wuDone || {}).filter(Boolean).length >= wu,
+      flags: [...(msgs.some(m => m.includes('vague terminée')) ? ['wave'] : []), ...(msgs.some(m => m.includes('série max')) ? ['pr'] : [])] };
+    entry.xp = Game.entryXp(entry);
+    const before = Game.levelOf(Game.totalXp(S)).level;
+    S.history.unshift(entry); S.current = null; Timer.stop();
+    const ev = Game.evaluate(S, P().level);
+    save();
     go(`#/h/${entry.id}`);
-    setTimeout(() => toast('Séance enregistrée ✅'), 50);
+    celebrate(entry.xp, ev, before);
   }, 'Enregistrer');
+}
+
+// ---------- Gamification ----------
+function miniLevel() {
+  const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
+  return `<button class="card lvl-mini tap" data-go="#/jeu"><div class="lvl-face">${Game.avatarSvg(R.index)}</div>
+    <div class="body"><b>Niveau ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
+    <div class="sub">${L.cur} / ${L.need} XP</div></div><span class="chev">›</span></button>`;
+}
+function viewGame() {
+  header('Progression');
+  const xp = Game.totalXp(S), L = Game.levelOf(xp), R = Game.rankOf(L.level);
+  const wk = Game.weekKey(Date.now());
+  const es = S.history.filter(h => Game.weekKey(h.date) === wk);
+  const done = S.game.quests[wk] || [];
+  const quests = Game.weeklyQuests(P().level);
+  const streak = Game.activeStreak(S.history);
+  const end = new Date(wk); end.setDate(end.getDate() + 7);
+  const daysLeft = Math.max(1, Math.ceil((end - Date.now()) / 864e5));
+  $('#app').innerHTML = `
+    <div class="panel" style="--rc:${R.color}">
+      <div class="panel-art">${Game.avatarSvg(R.index, { cls: 'big' })}
+        <div class="bubble">${esc(R.quote)}</div>
+        <div class="rank-badge">${R.letter}</div></div>
+      <div class="panel-info">
+        <div class="lvl-num">NIV. <b>${L.level}</b></div>
+        <div class="rank-name">Rang ${R.letter} · ${R.name}</div>
+        <div class="xpbar big"><i style="width:${Math.round(100 * L.cur / L.need)}%"></i></div>
+        <div class="sub">${L.cur} / ${L.need} XP vers le niveau ${L.level + 1} · ${xp.toLocaleString('fr-FR')} XP au total</div>
+        ${R.next ? `<div class="sub">Prochain rang : <b>${R.next.letter} · ${R.next.name}</b> au niveau ${R.next.lvl}</div>` : '<div class="sub">Rang maximal atteint 👑</div>'}
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>🔥 ${streak}</b><span>semaine${streak > 1 ? 's' : ''} active${streak > 1 ? 's' : ''} d’affilée</span></div>
+      <div class="stat"><b>${Object.keys(S.game.badges).length} / ${Game.BADGES.length}</b><span>badges</span></div>
+    </div>
+    <h2>Quêtes de la semaine · encore ${daysLeft} j</h2>
+    <div class="card">${quests.map(q => {
+      const n = Math.min(q.goal, q.count(es)), ok = done.includes(q.id);
+      return `<div class="row quest ${ok ? 'ok' : ''}"><span class="emoji">${ok ? '✅' : q.icon}</span><div class="body"><div class="title">${q.label}</div>
+        <div class="xpbar"><i style="width:${Math.round(100 * n / q.goal)}%"></i></div></div><div class="right"><b>${n}/${q.goal}</b><div class="sub">+${q.xp} XP</div></div></div>`;
+    }).join('')}
+      <div class="row quest ${done.includes('perfect') ? 'ok' : ''}"><span class="emoji">${done.includes('perfect') ? '✅' : '⭐'}</span><div class="body"><div class="title">Semaine parfaite</div><div class="sub">Toutes les quêtes remplies</div></div><div class="right"><div class="sub">+${Game.PERFECT_XP} XP</div></div></div>
+    </div>
+    <h2>Badges</h2>
+    <div class="badges">${Game.BADGES.map(b => { const t = S.game.badges[b.id];
+      return `<div class="badge ${t ? 'got' : ''}"><span>${t ? b.icon : '🔒'}</span><b>${b.name}</b><small>${b.desc}</small></div>`; }).join('')}</div>
+    <h2>Les rangs</h2>
+    <div class="card">${Game.RANKS.map((x, i) => `<div class="row ${i > R.index ? 'locked' : ''}"><span class="rank-chip" style="background:${x.color}">${x.letter}</span>
+      <div class="body"><div class="title">${x.name}</div><div class="sub">À partir du niveau ${x.lvl}</div></div>${i === R.index ? '<span class="pill ok">actuel</span>' : ''}</div>`).join('')}</div>
+    <p class="hint">XP : séance terminée (+60), chaque série de travail (+5), échauffement complet (+25), minutes de course (+1,5/min), séance de qualité (+25), quêtes et badges en bonus.</p>`;
+}
+
+function celebrate(xp, ev, before) {
+  const total = Game.totalXp(S), L = Game.levelOf(total), R = Game.rankOf(L.level);
+  const up = L.level > before, rankUp = Game.rankOf(before).index < R.index;
+  const el = $('#celebrate');
+  el.innerHTML = `<div class="cel-box" style="--rc:${R.color}">
+    <div class="cel-rays"></div>
+    <div class="cel-title">${rankUp ? 'NOUVEAU RANG !' : up ? 'LEVEL UP !' : 'BIEN JOUÉ !'}</div>
+    <div class="cel-art">${Game.avatarSvg(R.index, { cls: 'big' })}</div>
+    ${up ? `<div class="cel-lvl">Niveau ${before} → <b>${L.level}</b>${rankUp ? `<br>Rang ${R.letter} · ${R.name}` : ''}</div>` : `<div class="cel-lvl">Niveau ${L.level} · encore ${L.need - L.cur} XP</div>`}
+    <div class="cel-xp">+${xp + ev.bonus} XP</div>
+    <ul class="cel-list">
+      <li>Séance terminée : +${xp} XP</li>
+      ${ev.quests.map(q => `<li>${q.icon} Quête réussie : ${q.label} (+${q.xp})</li>`).join('')}
+      ${ev.perfect ? `<li>⭐ Semaine parfaite ! (+${Game.PERFECT_XP})</li>` : ''}
+      ${ev.badges.map(b => `<li>${b.icon} Badge « ${b.name} » (+100)</li>`).join('')}
+    </ul>
+    <button class="btn primary" data-cel="ok">Continuer</button></div>`;
+  el.classList.add('show');
+  if (navigator.vibrate) navigator.vibrate(up ? [80, 60, 80, 60, 200] : 80);
+}
+$('#celebrate').addEventListener('click', e => { if (e.target.closest('[data-cel]') || e.target.id === 'celebrate') $('#celebrate').classList.remove('show'); });
+
+// ---------- Demande libre (Claude) ----------
+const EXAMPLES = [
+  '45 min haut du corps avec seulement des haltères de 10 et 20 kg',
+  'Séance jambes sans squat, j’ai une gêne au genou gauche',
+  'Fractionné court sur piste, j’ai 40 minutes',
+  'Footing de 30 min avec quelques accélérations',
+  'Full body rapide en 30 min à l’hôtel, poids du corps uniquement',
+];
+function viewFreeForm() {
+  header('Demande libre', '#/');
+  const key = getApiKey();
+  $('#app').innerHTML = !key ? `<div class="card pad">
+      <p>✨ La demande libre utilise <b>Claude</b> pour composer une séance sur mesure à partir de votre texte, en tenant compte de votre niveau, de vos charges, de vos allures et de votre forme.</p>
+      <p class="muted">Il faut une clé API Claude (créée sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, quelques centimes par séance). Elle reste sur ce téléphone.</p>
+      <button class="btn primary" data-go="#/profil">Ajouter ma clé dans le profil</button></div>`
+    : `<form>
+    <label>Que voulez-vous faire aujourd’hui ?</label>
+    <textarea name="req" rows="4" placeholder="${esc(EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)])}" required></textarea>
+    <div class="chips ex-chips">${EXAMPLES.map(x => `<button type="button" class="chip-btn">${esc(x)}</button>`).join('')}</div>
+    ${formFields('muscu')}
+    <button class="btn primary big" type="submit">✨ Composer ma séance</button>
+    <p class="hint">Matériel par défaut : celui coché lors de votre dernière séance muscu, sauf si vous en citez un autre.</p>
+  </form>`;
+  if (!key) return;
+  bindForm();
+  const f = $('#app form');
+  f.querySelector('.ex-chips').addEventListener('click', e => { const b = e.target.closest('.chip-btn'); if (b) { f.req.value = b.textContent; f.req.focus(); } });
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const request = f.req.value.trim();
+    if (!request) return toast('Décrivez la séance souhaitée');
+    if (!confirmReplace()) return;
+    const { vals, form, pains } = readForm(f);
+    busy('Claude compose votre séance…');
+    try {
+      const r = await askClaude({ request, profile: P(), history: S.history, form: { ...form, vals }, pains, eq: P().eq });
+      S.current = { id: uid(), startedAt: Date.now(), request, ...toSession(r, P(), { form, pains, eq: P().eq }) };
+      save(); go('#/seance');
+    } catch (err) {
+      console.error(err);
+      toast(err?.status === 401 ? '❌ Clé API refusée' : `❌ ${err?.message?.slice(0, 80) || 'Pas de connexion'}`);
+    } finally { busy(false); }
+  });
 }
 
 // ---------- Historique ----------
 function viewHistory() {
-  header('Historique', '#/');
+  header('Historique');
   $('#app').innerHTML = histList(S.history);
 }
 function viewHistoryItem(id) {
@@ -467,7 +615,8 @@ function viewHistoryItem(id) {
   $('#app').innerHTML = `
     <p class="muted">${new Date(x.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}</p>
     <div class="stats"><div class="stat"><b>${s.form.emoji} ${s.form.label}</b><span>forme avant la séance</span></div>
-      <div class="stat"><b>${esc(x.feel)}</b><span>ressenti</span></div></div>
+      <div class="stat"><b>${esc(x.feel)}</b><span>ressenti${x.xp ? ` · +${x.xp} XP` : ''}</span></div></div>
+    ${x.session.request ? `<div class="banner ai">✨ Demande : « ${esc(x.session.request)} »</div>` : ''}
     <h2>Résumé</h2><div class="card">${body}</div>
     ${x.msgs?.length ? `<h2>Progression</h2><div class="card pad"><ul class="tips">${x.msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul></div>` : ''}
     ${x.notes ? `<h2>Notes</h2><div class="card pad">${esc(x.notes)}</div>` : ''}
@@ -478,8 +627,7 @@ function viewHistoryItem(id) {
 // ---------- Profil ----------
 function viewProfile() {
   const p = P(), first = !p.setup;
-  header(first ? 'Bienvenue 👋' : 'Mon profil', first ? null : '#/');
-  if (first) $('#hdr').innerHTML = '<h1>Bienvenue 👋</h1>';
+  header(first ? 'Bienvenue 👋' : 'Mon profil');
   const r = p.run;
   $('#app').innerHTML = `<form id="pf">
     ${first ? '<p class="muted">Quelques infos pour adapter les séances à votre niveau. Tout reste modifiable ensuite.</p>' : ''}
@@ -507,6 +655,11 @@ function viewProfile() {
       <h2>Programme</h2>
       <div class="card pad"><p class="hint" style="margin-top:0">Muscu : vagues de 3 semaines sur les mouvements de base (${(WAVES[p.level] || WAVES.inter).map(w => `${w.sets}×${w.reps} à ${Math.round(w.pct * 100)} %`).join(', puis ')}), +2,5 kg (haut du corps) ou +5 kg (bas du corps) à chaque vague réussie. Accessoires en double progression.</p>
       <button class="btn" type="button" data-act2="resetprog">Remettre les vagues et le fractionné au début</button></div>
+      <h2>Demande libre (Claude)</h2>
+      <div class="card pad"><p class="hint" style="margin-top:0">${getApiKey() ? '✅ Clé enregistrée : la demande libre est active.' : 'Ajoutez une clé API Claude pour décrire vos séances en texte libre.'}
+        Clé créée sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (quelques centimes par séance). Elle reste sur ce téléphone et n’est pas incluse dans les sauvegardes.</p>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(getApiKey())}">
+        <div class="actions2"><button class="btn primary" type="button" data-act2="savekey">Enregistrer la clé</button><button class="btn" type="button" data-act2="delkey">Retirer</button></div></div>
       <h2>Sauvegarde</h2>
       <button class="btn" type="button" data-act2="export">Exporter mes données</button>
       <button class="btn" type="button" data-act2="import">Importer une sauvegarde</button>
@@ -527,6 +680,15 @@ function viewProfile() {
     const b = e.target.closest('[data-act2]'); if (!b) return;
     const a = b.dataset.act2;
     if (a === 'export') return exportData();
+    if (a === 'savekey') {
+      const k = $('#apiKey').value.trim(); if (!k) return toast('Collez votre clé');
+      busy('Vérification de la clé…');
+      testApiKey(k).then(() => { setApiKey(k); toast('✅ Clé valide et enregistrée'); viewProfile(); })
+        .catch(err => { console.error(err); toast('❌ Clé refusée ou pas de connexion'); })
+        .finally(() => busy(false));
+      return;
+    }
+    if (a === 'delkey') { setApiKey(''); toast('Clé retirée'); return viewProfile(); }
     if (a === 'import') return $('#importFile').click();
     if (a === 'reset' && confirm('Effacer profil, historique et progression ?')) { localStorage.removeItem(KEY); S = blank(); go('#/profil'); render(); }
     if (a === 'resetprog' && confirm('Repartir en semaine 1 et au premier niveau de fractionné ?')) {

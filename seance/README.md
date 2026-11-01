@@ -34,6 +34,20 @@ et des exercices en moins, allures plus douces) ou remplacée par un footing ou 
 - Chaque séance affiche la **durée cible** et l'**allure** de chaque bloc, avec un **guidage chronométré**
   (bips à chaque changement d'étape).
 
+**Demande libre ✨** : décrivez la séance voulue en quelques mots (« 40 min haut du corps avec des
+haltères, genou fragile », « fractionné court, j'ai 40 minutes »…). Claude compose une séance complète
+(échauffement, séries, charges, récupérations ou déroulé chronométré avec allures) d'après votre niveau, vos
+charges, vos allures, votre forme du jour et vos dernières séances. Nécessite une clé API Claude, à ajouter
+dans le profil (quelques centimes par séance, la clé reste sur le téléphone).
+
+**Progression 🏆 (gamification)**
+- XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
+- Niveaux et rangs E → D → C → B → A → S → SS, avec un avatar style manga qui évolue (aura, couleur, carrure).
+- Quêtes hebdomadaires adaptées au niveau (séances muscu, sorties running, fractionné, sortie longue,
+  échauffement complet) et bonus « semaine parfaite ».
+- 14 badges (premier pas, vague domptée, record, 10 000 kg en une séance, 200 km courus, série de semaines…).
+- Écran « LEVEL UP ! » à la fin de la séance.
+
 Les données restent sur le téléphone (export / import d'une sauvegarde dans le profil).
 Les charges proposées pour les accessoires au premier usage sont des estimations : corrigez-les en
 touchant la série, l'app retient la charge utilisée.
