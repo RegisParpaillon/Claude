@@ -1,0 +1,110 @@
+{
+ "description": "Progression running : image pour chaque palier (un tous les 5 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom.",
+ "paliers": [
+  {
+   "niveau": 1,
+   "nom": "Débutant",
+   "image": "niveau-001.jpg"
+  },
+  {
+   "niveau": 5,
+   "nom": "Apprentissage",
+   "image": "niveau-005.jpg"
+  },
+  {
+   "niveau": 10,
+   "nom": "Progression",
+   "image": "niveau-010.jpg"
+  },
+  {
+   "niveau": 15,
+   "nom": "Endurance",
+   "image": "niveau-015.jpg"
+  },
+  {
+   "niveau": 20,
+   "nom": "Régularité",
+   "image": "niveau-020.jpg"
+  },
+  {
+   "niveau": 25,
+   "nom": "Plus fort",
+   "image": "niveau-025.jpg"
+  },
+  {
+   "niveau": 30,
+   "nom": "Aérobie",
+   "image": "niveau-030.jpg"
+  },
+  {
+   "niveau": 35,
+   "nom": "Résistance",
+   "image": "niveau-035.jpg"
+  },
+  {
+   "niveau": 40,
+   "nom": "Performance",
+   "image": "niveau-040.jpg"
+  },
+  {
+   "niveau": 45,
+   "nom": "Compétiteur",
+   "image": "niveau-045.jpg"
+  },
+  {
+   "niveau": 50,
+   "nom": "Élite",
+   "image": "niveau-050.jpg"
+  },
+  {
+   "niveau": 55,
+   "nom": "Spécialisation",
+   "image": "niveau-055.jpg"
+  },
+  {
+   "niveau": 60,
+   "nom": "Endurance longue",
+   "image": "niveau-060.jpg"
+  },
+  {
+   "niveau": 65,
+   "nom": "Vitesse",
+   "image": "niveau-065.jpg"
+  },
+  {
+   "niveau": 70,
+   "nom": "Ultra-endurance",
+   "image": "niveau-070.jpg"
+  },
+  {
+   "niveau": 75,
+   "nom": "Résilience",
+   "image": "niveau-075.jpg"
+  },
+  {
+   "niveau": 80,
+   "nom": "Explosivité",
+   "image": "niveau-080.jpg"
+  },
+  {
+   "niveau": 85,
+   "nom": "Spécialiste trail",
+   "image": "niveau-085.jpg"
+  },
+  {
+   "niveau": 90,
+   "nom": "Ultra-traileur",
+   "image": "niveau-090.jpg"
+  },
+  {
+   "niveau": 95,
+   "nom": "Légende",
+   "image": "niveau-095.jpg"
+  },
+  {
+   "niveau": 100,
+   "nom": "Surhumain",
+   "image": "niveau-100.jpg"
+  }
+ ]
+}

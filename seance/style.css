@@ -399,3 +399,17 @@ body.has-tabs { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .lvl-face img.stage { transform: scale(2); transform-origin: 50% 36%; }
 .panel-art.is-stage .stat-box { top: 70%; bottom: 2%; align-content: center; background: rgba(10,12,40,.92); font-size: 12px; gap: 8px 12px; }
 .stage-card img { aspect-ratio: 1 / 1; object-position: 50% 0; }
+/* Deux pistes de progression */
+.lvl-minis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.lvl-minis .lvl-mini { margin-top: 0; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
+.lvl-minis .lvl-face { width: 100%; height: 110px; border-radius: 10px; }
+.lvl-minis .lvl-face img.stage { transform: scale(1.35); transform-origin: 50% 30%; }
+.lvl-minis .body b { font-size: 14px; line-height: 1.2; display: block; }
+.lvl-track { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; }
+.seg.two { grid-template-columns: 1fr 1fr; margin-bottom: 12px; }
+.track-seg input { display: none; }
+.stat-box.run div { display: flex; justify-content: space-between; align-items: center; }
+.stat-box.run em { font-weight: 800; }
+.panel-art.is-stage .stat-box.run { display: block; top: 74%; }
+.panel-art.is-stage .stat-box.run div { margin: 3px 0; }
+.panel-art.is-stage .stat-box.run { top: 71%; bottom: 0; border-radius: 8px 8px 0 0; }
