@@ -116,12 +116,11 @@ function viewHome() {
   const q = nextQuality();
   $('#app').innerHTML = `
     ${S.current ? `<button class="card resume tap" data-go="#/seance"><span>▶</span><div><b>Séance en cours</b><div class="sub">${esc(S.current.title)}</div></div><span class="chev">›</span></button>` : ''}
-    <div class="choices">
-      <button class="choice tap" data-go="#/muscu"><span class="ce">🏋️</span><b>Muscu</b><span class="sub">Prochaine : ${r.label}</span></button>
-      <button class="choice tap" data-go="#/run"><span class="ce">🏃</span><b>Running</b><span class="sub">Prochain fractionné : ${QUALITY[q].short}</span></button>
+    <div class="hero-choices">
+      ${heroChoice('muscu', '#/muscu', `Prochaine : ${r.label}`)}
+      ${heroChoice('run', '#/run', `Prochain fractionné : ${QUALITY[q].short}`)}
     </div>
     <button class="card free tap" data-go="#/libre"><span class="ce">✨</span><div><b>Demande libre</b><div class="sub">« 40 min haut du corps avec haltères, genou fragile »</div></div><span class="chev">›</span></button>
-    ${miniLevels()}
     <h2>Cette semaine</h2>
     <div class="stats">
       <div class="stat"><b>${week.filter(x => x.kind === 'muscu').length}</b><span>séance(s) muscu</span></div>
@@ -495,6 +494,17 @@ function miniLevel(track = 'muscu') {
   return `<button class="card lvl-mini tap" data-go="#/jeu/${track}"><div class="lvl-face">${avatar(R.index, '', track)}</div>
     <div class="body"><div class="lvl-track">${T[track].icon} ${T[track].label}</div><b>Niv. ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
     <div class="sub">${L.max ? 'Niveau maximal 👑' : `${L.cur} / ${L.need} XP`}</div></div></button>`;
+}
+// Grande carte de l'accueil : image du palier + niveau ; un appui ouvre la séance
+function heroChoice(track, href, next) {
+  const { L, R } = trackState(track);
+  return `<button class="hero-choice tap" data-go="${href}" style="--rc:${R.color}">
+    <div class="hc-img">${avatar(R.index, '', track)}</div>
+    <div class="hc-info"><div class="hc-title">${T[track].icon} ${T[track].label}</div>
+      <div class="hc-lvl">Niv. ${L.level} · ${esc(R.name)}</div>
+      <div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
+      <div class="hc-next">${esc(next)}</div>
+      <div class="hc-go">Démarrer ›</div></div></button>`;
 }
 const miniLevels = () => `<div class="lvl-minis">${miniLevel('muscu')}${miniLevel('run')}</div>`;
 function statBox(track) {
