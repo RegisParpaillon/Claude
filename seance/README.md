@@ -40,7 +40,11 @@ haltères, genou fragile », « fractionné court, j'ai 40 minutes »…). Claud
 charges, vos allures, votre forme du jour et vos dernières séances. Nécessite une clé API Claude, à ajouter
 dans le profil (quelques centimes par séance, la clé reste sur le téléphone).
 
-**Progression 🏆 (gamification)**
+**Progression 🏆 (gamification)** : deux pistes indépendantes, **Muscu** et **Running**, chacune avec son niveau
+(1 à 100), ses 21 paliers et ses images (`data/paliers/` pour la muscu, `data/running/` pour le running). Les
+séances muscu font monter la piste Muscu, les sorties running la piste Running ; les quêtes et badges vont dans
+la piste qu'ils concernent. Sur l'image running : allure EF, VMA et plus longue sortie réelles.
+
 - XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
 - Niveaux 1 à 100 en 21 paliers, un tous les 5 niveaux : Débutant (1), Apprentissage (5), En forme (10),
   Progression (15), En progression (20), Plus fort (25), Solidité (30), Performance (35), Puissance (40),

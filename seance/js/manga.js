@@ -185,31 +185,35 @@ export function avatarUrl(rank) {
 
 // ---------- Planche d'évolution : une image par palier ----------
 // Les cases sont découpées sur le téléphone et gardées en privé (une image par palier).
-const STAGES_KEY = 'seance-stages';
-let stages = null;
-try { stages = JSON.parse(localStorage.getItem(STAGES_KEY) || 'null'); } catch { stages = null; }
-// Images intégrées au site : data/paliers/paliers.json (une image par palier, choisie selon le niveau)
-let builtin = null;
+// Images intégrées au site, une série par piste : data/paliers (muscu) et data/running (running)
+const DIRS = { muscu: 'paliers', run: 'running' };
+const LOCAL_KEYS = { muscu: 'seance-stages', run: 'seance-stages-run' };
+const builtin = {};
+const local = {};
+for (const t of Object.keys(LOCAL_KEYS)) { try { local[t] = JSON.parse(localStorage.getItem(LOCAL_KEYS[t]) || 'null'); } catch { local[t] = null; } }
 export async function loadBuiltinStages() {
-  try {
-    const r = await fetch('data/paliers/paliers.json', { cache: 'no-cache' });
-    if (!r.ok) return;
-    const j = await r.json();
-    const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/paliers/${p.image}`);
-    if (list.length === RANKS.length) builtin = list;
-  } catch { /* hors ligne au premier lancement : on garde l'avatar dessiné */ }
+  await Promise.all(Object.entries(DIRS).map(async ([t, dir]) => {
+    try {
+      const r = await fetch(`data/${dir}/paliers.json`, { cache: 'no-cache' });
+      if (!r.ok) return;
+      const j = await r.json();
+      const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/${dir}/${p.image}`);
+      if (list.length === RANKS.length) builtin[t] = list;
+    } catch { /* hors ligne au premier lancement : avatar dessiné */ }
+  }));
 }
-const localStages = () => (Array.isArray(stages) && stages.length === RANKS.length ? stages : null);
-export const hasLocalStages = () => !!localStages();
-export const hasStages = () => !!(localStages() || builtin);
-export const stageUrl = i => { const l = localStages() || builtin; return l ? l[Math.min(l.length - 1, Math.max(0, i))] : null; };
-export function removeStages() { localStorage.removeItem(STAGES_KEY); stages = null; }
+const localList = t => (Array.isArray(local[t]) && local[t].length === RANKS.length ? local[t] : null);
+export const hasLocalStages = (t = 'muscu') => !!localList(t);
+export const hasStages = (t = 'muscu') => !!(localList(t) || builtin[t]);
+export const stageUrl = (i, t = 'muscu') => { const l = localList(t) || builtin[t]; return l ? l[Math.min(l.length - 1, Math.max(0, i))] : null; };
+export function removeStages(t = 'muscu') { localStorage.removeItem(LOCAL_KEYS[t]); local[t] = null; }
+export function saveStages(list, t = 'muscu') { localStorage.setItem(LOCAL_KEYS[t], JSON.stringify(list)); local[t] = list; }
 
 // Séparations sombres : suites de lignes (ou colonnes) nettement plus sombres que le reste
 function darkRuns(prof, minGap) {
   const sorted = Array.from(prof).sort((x, y) => x - y);
   const med = sorted[Math.floor(sorted.length / 2)];
-  const thr = med * 0.3;   // les traits de séparation sont presque noirs
+  const thr = med * 0.45;  // les traits de séparation sont nettement plus sombres que les cases
   const runs = []; let start = -1;
   for (let i = 0; i <= prof.length; i++) {
     const d = i < prof.length && prof[i] < thr;
@@ -264,7 +268,4 @@ export async function importSheet(file) {
     return o.toDataURL('image/jpeg', 0.88);
   });
 }
-export function saveStages(list) {
-  localStorage.setItem(STAGES_KEY, JSON.stringify(list));
-  stages = list;
-}
+
