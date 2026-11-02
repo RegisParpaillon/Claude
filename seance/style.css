@@ -413,3 +413,18 @@ body.has-tabs { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .panel-art.is-stage .stat-box.run { display: block; top: 74%; }
 .panel-art.is-stage .stat-box.run div { margin: 3px 0; }
 .panel-art.is-stage .stat-box.run { top: 71%; bottom: 0; border-radius: 8px 8px 0 0; }
+/* Accueil : grandes cartes Muscu / Running avec l'image du palier */
+.hero-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.hero-choice { display: flex; flex-direction: column; padding: 0; overflow: hidden; border: 0; border-radius: 16px; background: var(--card);
+  color: inherit; font: inherit; text-align: left; cursor: pointer; box-shadow: 0 0 0 2px var(--rc) inset; }
+.hero-choice:active { opacity: .8; }
+.hc-img { aspect-ratio: 4 / 5; overflow: hidden; background: #1e1b4b; }
+.hc-img img, .hc-img svg { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.hc-info { padding: 10px 10px 12px; }
+.hc-title { font-size: 19px; font-weight: 800; }
+.hc-lvl { font-size: 13px; font-weight: 600; margin-top: 2px; }
+.hc-next { font-size: 12.5px; color: var(--muted); line-height: 1.25; margin-top: 4px; }
+.hc-go { margin-top: 8px; background: var(--accent); color: var(--accent-text); border-radius: 9px; padding: 7px; text-align: center; font-weight: 700; font-size: 14px; }
+.hc-info { flex: 1; display: flex; flex-direction: column; }
+.hc-go { margin-top: auto; }
+.hc-next { margin-bottom: 8px; }
