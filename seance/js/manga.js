@@ -1,3 +1,4 @@
+import { RANKS } from './game.js';
 // Transformation d'une photo en case de manga, entièrement sur le téléphone :
 // traits à l'encre (différence de gaussiennes), trames de points, aplats noirs et lignes de vitesse.
 
@@ -121,7 +122,7 @@ export function mangaFilter(ctx, o) {
 
 // Effets de case : lignes de concentration, cadre et étincelles selon le rang
 export function panelFx(ctx, rank) {
-  const cx = W / 2, cy = H * 0.42, n = 70 + rank.index * 18;
+  const cx = W / 2, cy = H * 0.42, n = 70 + (rank.tier ?? rank.index) * 18;
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   ctx.save();
   for (let k = 0; k < n; k++) {
@@ -136,14 +137,14 @@ export function panelFx(ctx, rank) {
     ctx.lineTo(cx + Math.cos(a - wdt) * W, cy + Math.sin(a - wdt) * H);
     ctx.lineTo(cx + Math.cos(a + wdt) * W, cy + Math.sin(a + wdt) * H);
     ctx.closePath();
-    ctx.fillStyle = rank.index >= 2 && k % 3 === 0 ? rank.color : '#000';
+    ctx.fillStyle = (rank.tier ?? rank.index) >= 2 && k % 3 === 0 ? rank.color : '#000';
     ctx.globalAlpha = 0.85;
     ctx.fill();
     void x1; void y1;
   }
   ctx.globalAlpha = 1;
-  if (rank.index >= 4) {
-    for (let k = 0; k < 6 + rank.index; k++) {
+  if ((rank.tier ?? rank.index) >= 4) {
+    for (let k = 0; k < 6 + (rank.tier ?? rank.index); k++) {
       const x = rnd() * W, y = rnd() * H * 0.9;
       if (Math.hypot((x - cx) / W, (y - cy) / H) < 0.33) continue;
       const s = 6 + rnd() * 10;
@@ -182,7 +183,7 @@ export function avatarUrl(rank) {
   return cache[rank.index];
 }
 
-// ---------- Planche d'évolution : une image contenant 9 cases (5 en haut, 4 en bas) ----------
+// ---------- Planche d'évolution : une image par palier ----------
 // Les cases sont découpées sur le téléphone et gardées en privé (une image par palier).
 const STAGES_KEY = 'seance-stages';
 let stages = null;
@@ -195,66 +196,73 @@ export async function loadBuiltinStages() {
     if (!r.ok) return;
     const j = await r.json();
     const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/paliers/${p.image}`);
-    if (list.length === 9) builtin = list;
+    if (list.length === RANKS.length) builtin = list;
   } catch { /* hors ligne au premier lancement : on garde l'avatar dessiné */ }
 }
-const localStages = () => (Array.isArray(stages) && stages.length === 9 ? stages : null);
+const localStages = () => (Array.isArray(stages) && stages.length === RANKS.length ? stages : null);
 export const hasLocalStages = () => !!localStages();
 export const hasStages = () => !!(localStages() || builtin);
-export const stageUrl = i => { const l = localStages() || builtin; return l ? l[Math.min(8, Math.max(0, i))] : null; };
+export const stageUrl = i => { const l = localStages() || builtin; return l ? l[Math.min(l.length - 1, Math.max(0, i))] : null; };
 export function removeStages() { localStorage.removeItem(STAGES_KEY); stages = null; }
 
-// Cherche la ligne de séparation sombre la plus proche de la position attendue
-function findSep(lum, expected, span) {
-  let best = expected, bestV = Infinity;
-  for (let x = Math.max(1, expected - span); x <= Math.min(lum.length - 2, expected + span); x++) {
-    const v = lum[x - 1] + lum[x] + lum[x + 1];
-    if (v < bestV) { bestV = v; best = x; }
+// Séparations sombres : suites de lignes (ou colonnes) nettement plus sombres que le reste
+function darkRuns(prof, minGap) {
+  const sorted = Array.from(prof).sort((x, y) => x - y);
+  const med = sorted[Math.floor(sorted.length / 2)];
+  const thr = med * 0.3;   // les traits de séparation sont presque noirs
+  const runs = []; let start = -1;
+  for (let i = 0; i <= prof.length; i++) {
+    const d = i < prof.length && prof[i] < thr;
+    if (d && start < 0) start = i;
+    if (!d && start >= 0) { runs.push([start, i - 1]); start = -1; }
   }
-  return best;
-}
-function profile(data, w, y0, y1, axis) {
-  // axis 'x' : luminosité moyenne de chaque colonne entre y0 et y1
-  const out = new Float32Array(w);
-  for (let y = y0; y < y1; y += 2) for (let x = 0; x < w; x++) {
-    const i = (y * w + x) * 4; out[x] += data[i] + data[i + 1] + data[i + 2];
+  // garder les séparations fines, loin des bords et assez espacées
+  const out = [];
+  for (const [a, b] of runs) {
+    if (b - a > prof.length * 0.03 || a < prof.length * 0.04 || b > prof.length * 0.96) continue;
+    if (out.length && a - out[out.length - 1][1] < minGap) continue;
+    out.push([a, b]);
   }
-  void axis;
   return out;
 }
 
+// Planche d'évolution : une image découpée en cases (rangées et colonnes détectées automatiquement),
+// lues de gauche à droite puis de haut en bas. Il faut autant de cases que de paliers.
 export async function importSheet(file) {
   const url = URL.createObjectURL(file);
   let i;
   try { i = await loadImage(url); } finally { URL.revokeObjectURL(url); }
   const w = i.naturalWidth, h = i.naturalHeight;
-  if (Math.abs(w / h - 1) > 0.15) throw new Error('format');
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const ctx = c.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(i, 0, 0);
   const data = ctx.getImageData(0, 0, w, h).data;
-  // ligne horizontale entre les deux rangées (attendue vers 51 %)
-  const rows = new Float32Array(h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x += 2) { const k = (y * w + x) * 4; rows[y] += data[k] + data[k + 1] + data[k + 2]; }
-  const ySep = findSep(rows, Math.round(h * 0.51), Math.round(h * 0.04));
-  const top = profile(data, w, Math.round(h * 0.08), Math.round(h * 0.45));
-  const bot = profile(data, w, Math.round(h * 0.58), Math.round(h * 0.95));
-  const span = Math.round(w * 0.03);
-  const tx = [0, ...[0.2, 0.4, 0.6, 0.8].map(f => findSep(top, Math.round(w * f), span)), w];
-  const bx = [0, ...[0.206, 0.426, 0.639].map(f => findSep(bot, Math.round(w * f), span)), w];
-  const m = Math.round(w * 0.006);           // marge pour enlever les traits de séparation
-  const cut = (x0, x1, y0, y1) => {
-    const o = document.createElement('canvas');
-    const cw = x1 - x0 - 2 * m, ch = y1 - y0 - 2 * m;
+  const lum = (x, y) => { const k = (y * w + x) * 4; return data[k] + data[k + 1] + data[k + 2]; };
+  const rowProf = new Float32Array(h);
+  for (let y = 0; y < h; y++) { let s = 0; for (let x = 0; x < w; x += 2) s += lum(x, y); rowProf[y] = s / (w / 2); }
+  const hs = darkRuns(rowProf, h * 0.08);
+  const bands = []; let y0 = 0;
+  for (const [a, b] of hs) { bands.push([y0, a]); y0 = b + 1; }
+  bands.push([y0, h]);
+  const cells = [];
+  for (const [b0, b1] of bands) {
+    const m0 = b0 + Math.round((b1 - b0) * 0.1), m1 = b1 - Math.round((b1 - b0) * 0.1);
+    const colProf = new Float32Array(w);
+    for (let x = 0; x < w; x++) { let s = 0; for (let y = m0; y < m1; y += 2) s += lum(x, y); colProf[x] = s / ((m1 - m0) / 2); }
+    const vs = darkRuns(colProf, w * 0.08);
+    let x0 = 0;
+    for (const [a, b] of vs) { cells.push([x0, b0, a, b1]); x0 = b + 1; }
+    cells.push([x0, b0, w, b1]);
+  }
+  if (cells.length !== RANKS.length) throw new Error(`cases:${cells.length}`);
+  return cells.map(([x0, y0c, x1, y1]) => {
+    const m = 2, cw = x1 - x0 - 2 * m, ch = y1 - y0c - 2 * m;
     const s = Math.min(1, 520 / ch);
+    const o = document.createElement('canvas');
     o.width = Math.round(cw * s); o.height = Math.round(ch * s);
-    o.getContext('2d').drawImage(c, x0 + m, y0 + m, cw, ch, 0, 0, o.width, o.height);
+    o.getContext('2d').drawImage(c, x0 + m, y0c + m, cw, ch, 0, 0, o.width, o.height);
     return o.toDataURL('image/jpeg', 0.88);
-  };
-  const out = [];
-  for (let k = 0; k < 5; k++) out.push(cut(tx[k], tx[k + 1], 0, ySep));
-  for (let k = 0; k < 4; k++) out.push(cut(bx[k], bx[k + 1], ySep, h));
-  return out;
+  });
 }
 export function saveStages(list) {
   localStorage.setItem(STAGES_KEY, JSON.stringify(list));

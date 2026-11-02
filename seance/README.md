@@ -42,13 +42,15 @@ dans le profil (quelques centimes par séance, la clé reste sur le téléphone)
 
 **Progression 🏆 (gamification)**
 - XP à chaque séance (séries faites, échauffement complet, minutes courues, séances de qualité).
-- Niveaux 1 à 100 en 9 paliers : Débutant (1), En progression (20), Plus fort (40), Très performant (60),
-  Athlète confirmé (80), Elite (90), Légende (95), Surhumain (98), Parfait (100).
-- **Images des paliers dans `seance/data/paliers/`** : `niveau-001.jpg`, `niveau-020.jpg`, … `niveau-100.jpg`
+- Niveaux 1 à 100 en 21 paliers, un tous les 5 niveaux : Débutant (1), Apprentissage (5), En forme (10),
+  Progression (15), En progression (20), Plus fort (25), Solidité (30), Performance (35), Puissance (40),
+  Dépassement (45), Excellence (50), Optimisation (55), Haute performance (60), Légende en approche (65),
+  Surhumain (70), Inarrêtable (75), Athlète ultime (80), Maître (85), Elite (90), Légende (95), Parfait (100).
+- **Images des paliers dans `seance/data/paliers/`** : `niveau-001.jpg`, `niveau-005.jpg`, `niveau-010.jpg`, … `niveau-100.jpg`
   (listées dans `paliers.json`). Le site affiche automatiquement l'image du palier atteint. Pour changer une
   image, remplacez le fichier par un autre portant le même nom.
-- **Planche d'évolution** (facultatif, pour remplacer les images du site sur un téléphone) : importez une image de 9 cases (5 en haut, 4 en bas, par exemple créée avec
-  ChatGPT) ; l'app la découpe sur le téléphone et affiche la case de votre palier. Les paliers suivants
+- **Planche d'évolution** (facultatif, pour remplacer les images du site sur un téléphone) : importez une planche en grille avec une case par palier (21 cases, par exemple
+  créée avec ChatGPT) ; l'app détecte les cases et la découpe sur le téléphone et affiche la case de votre palier. Les paliers suivants
   restent masqués jusqu'à ce qu'ils soient atteints.
 - **Stats du personnage** calculées sur vos vraies données et affichées sur l'image :
   Force (maxis / poids de corps), Endurance (allures et sortie longue), Muscle (séries récentes et séances),

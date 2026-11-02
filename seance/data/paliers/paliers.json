@@ -1,40 +1,109 @@
 {
- "description": "Image du personnage pour chaque palier. Pour changer une image, remplacez le fichier par un autre portant le même nom.",
+ "description": "Image du personnage pour chaque palier (un palier tous les 5 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom.",
  "paliers": [
   {
    "niveau": 1,
+   "nom": "Débutant",
    "image": "niveau-001.jpg"
   },
   {
+   "niveau": 5,
+   "nom": "Apprentissage",
+   "image": "niveau-005.jpg"
+  },
+  {
+   "niveau": 10,
+   "nom": "En forme",
+   "image": "niveau-010.jpg"
+  },
+  {
+   "niveau": 15,
+   "nom": "Progression",
+   "image": "niveau-015.jpg"
+  },
+  {
    "niveau": 20,
+   "nom": "En progression",
    "image": "niveau-020.jpg"
   },
   {
+   "niveau": 25,
+   "nom": "Plus fort",
+   "image": "niveau-025.jpg"
+  },
+  {
+   "niveau": 30,
+   "nom": "Solidité",
+   "image": "niveau-030.jpg"
+  },
+  {
+   "niveau": 35,
+   "nom": "Performance",
+   "image": "niveau-035.jpg"
+  },
+  {
    "niveau": 40,
+   "nom": "Puissance",
    "image": "niveau-040.jpg"
   },
   {
+   "niveau": 45,
+   "nom": "Dépassement",
+   "image": "niveau-045.jpg"
+  },
+  {
+   "niveau": 50,
+   "nom": "Excellence",
+   "image": "niveau-050.jpg"
+  },
+  {
+   "niveau": 55,
+   "nom": "Optimisation",
+   "image": "niveau-055.jpg"
+  },
+  {
    "niveau": 60,
+   "nom": "Haute performance",
    "image": "niveau-060.jpg"
   },
   {
+   "niveau": 65,
+   "nom": "Légende en approche",
+   "image": "niveau-065.jpg"
+  },
+  {
+   "niveau": 70,
+   "nom": "Surhumain",
+   "image": "niveau-070.jpg"
+  },
+  {
+   "niveau": 75,
+   "nom": "Inarrêtable",
+   "image": "niveau-075.jpg"
+  },
+  {
    "niveau": 80,
+   "nom": "Athlète ultime",
    "image": "niveau-080.jpg"
   },
   {
+   "niveau": 85,
+   "nom": "Maître",
+   "image": "niveau-085.jpg"
+  },
+  {
    "niveau": 90,
+   "nom": "Elite",
    "image": "niveau-090.jpg"
   },
   {
    "niveau": 95,
+   "nom": "Légende",
    "image": "niveau-095.jpg"
   },
   {
-   "niveau": 98,
-   "image": "niveau-098.jpg"
-  },
-  {
    "niveau": 100,
+   "nom": "Parfait",
    "image": "niveau-100.jpg"
   }
  ]

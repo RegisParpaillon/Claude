@@ -552,7 +552,7 @@ function photoEditor() {
   openSheet('Avatar manga', `<form>
     <p class="muted">Prenez un selfie ou choisissez une photo : elle est transformée en case de manga directement sur le téléphone (rien n’est envoyé). Vous pouvez aussi importer une illustration déjà dessinée (par exemple créée avec une IA d’images) et la garder telle quelle.</p>
     <div class="card pad sheet-card"><b>🧩 Planche d’évolution</b>
-      <p class="hint" style="margin-top:4px">${Manga.hasLocalStages() ? 'Planche importée sur ce téléphone (elle remplace celle du site).' : Manga.hasStages() ? 'Les images du site (dossier data/paliers) sont utilisées. Vous pouvez importer une autre planche sur ce téléphone :' : 'Une image avec 9 cases (5 en haut, 4 en bas) du niveau 1 au niveau 100 : l’app la découpe et affiche la case correspondant à votre palier.'}</p>
+      <p class="hint" style="margin-top:4px">${Manga.hasLocalStages() ? 'Planche importée sur ce téléphone (elle remplace celle du site).' : Manga.hasStages() ? 'Les images du site (dossier data/paliers) sont utilisées. Vous pouvez importer une autre planche sur ce téléphone :' : 'Une image en grille avec une case par palier (${Game.RANKS.length} cases, du niveau 1 au niveau 100, lues de gauche à droite) : l’app la découpe et affiche la case de votre palier.'}</p>
       <div class="grid2"><button type="button" class="btn primary" data-ph="sheet">Importer une planche</button>
       ${Manga.hasLocalStages() ? '<button type="button" class="btn danger" data-ph="delsheet">Retirer</button>' : '<span></span>'}</div>
       ${Manga.hasStages() ? `<div class="stages mini">${Game.RANKS.map((x, i) => `<img src="${Manga.stageUrl(i)}" alt="${esc(x.name)}">`).join('')}</div>` : ''}</div>
@@ -599,9 +599,9 @@ function photoEditor() {
     try {
       const list = await Manga.importSheet(file);
       Manga.saveStages(list); closeSheet(); viewGame();
-      toast('Planche importée : 9 paliers 🔥');
+      toast(`Planche importée : ${list.length} paliers 🔥`);
     } catch (err) {
-      toast(err?.message === 'format' ? 'Il faut une image carrée avec 9 cases (5 en haut, 4 en bas)' : 'Image illisible');
+      toast(String(err?.message).startsWith('cases:') ? `${err.message.slice(6)} cases trouvées, il en faut ${Game.RANKS.length}` : 'Image illisible');
     } finally { busy(false); }
   });
   // recadrage au doigt

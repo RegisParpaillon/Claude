@@ -71,7 +71,7 @@ function bolt(x, y, s, color, rot = 0) {
 export function heroSvg(rank, opts = {}) {
   const id = 'h' + Math.random().toString(36).slice(2, 7);
   const au = rank.color;
-  const lvl = rank.index;
+  const lvl = rank.tier ?? rank.index;
   const bolts = [
     bolt(64, 120, .9, au, -15), bolt(318, 112, .9, au, 15), bolt(118, 250, .8, au, -20), bolt(270, 250, .8, au, 20),
     bolt(60, 196, .7, au, -30), bolt(330, 196, .7, au, 30), bolt(120, 340, .6, au, -10), bolt(266, 340, .6, au, 10),
