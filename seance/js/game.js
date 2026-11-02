@@ -1,15 +1,28 @@
 // Gamification : XP, niveaux, rangs, quêtes hebdomadaires et badges.
 
+// Un palier tous les 5 niveaux (images dans data/paliers). tier : intensité des effets visuels (0 à 6).
 export const RANKS = [
-  { lvl: 1, letter: 'E', name: 'Débutant', color: '#94a3b8', band: '#64748b', quote: 'Chaque légende commence par une première séance !' },
-  { lvl: 20, letter: 'D', name: 'En progression', color: '#22c55e', band: '#15803d', quote: 'Mon corps se souvient de chaque répétition.' },
-  { lvl: 40, letter: 'C', name: 'Plus fort', color: '#3b82f6', band: '#1d4ed8', quote: 'La barre ne me fait plus peur !' },
-  { lvl: 60, letter: 'B', name: 'Très performant', color: '#a855f7', band: '#7e22ce', quote: 'La régularité, c’est ma technique secrète.' },
-  { lvl: 80, letter: 'A', name: 'Athlète confirmé', color: '#f97316', band: '#c2410c', quote: 'Je repousse mes limites chaque semaine !' },
-  { lvl: 90, letter: 'S', name: 'Elite', color: '#ef4444', band: '#b91c1c', quote: 'L’effort est devenu ma seconde nature.' },
-  { lvl: 95, letter: 'SS', name: 'Légende', color: '#facc15', band: '#a16207', quote: 'On parle de moi dans toutes les salles.' },
-  { lvl: 98, letter: 'SSS', name: 'Surhumain', color: '#22d3ee', band: '#0e7490', quote: 'Mes limites ? Je ne les trouve plus.' },
-  { lvl: 100, letter: 'MAX', name: 'Parfait', color: '#60a5fa', band: '#1e40af', quote: 'PAS DE LIMITE !' },
+  { lvl: 1, letter: '1', name: "Débutant", color: '#94a3b8', band: '#94a3b8', tier: 0, quote: "Chaque légende commence par une première séance !" },
+  { lvl: 5, letter: '5', name: "Apprentissage", color: '#84cc16', band: '#84cc16', tier: 0, quote: "Les bases sont posées, la machine se lance." },
+  { lvl: 10, letter: '10', name: "En forme", color: '#22c55e', band: '#22c55e', tier: 1, quote: "Je me sens déjà différent." },
+  { lvl: 15, letter: '15', name: "Progression", color: '#10b981', band: '#10b981', tier: 1, quote: "Séance après séance, ça paie." },
+  { lvl: 20, letter: '20', name: "En progression", color: '#14b8a6', band: '#14b8a6', tier: 1, quote: "Mon corps se souvient de chaque répétition." },
+  { lvl: 25, letter: '25', name: "Plus fort", color: '#06b6d4', band: '#06b6d4', tier: 2, quote: "La barre ne me fait plus peur !" },
+  { lvl: 30, letter: '30', name: "Solidité", color: '#0ea5e9', band: '#0ea5e9', tier: 2, quote: "Rien ne m’ébranle." },
+  { lvl: 35, letter: '35', name: "Performance", color: '#3b82f6', band: '#3b82f6', tier: 2, quote: "Je performe à chaque séance." },
+  { lvl: 40, letter: '40', name: "Puissance", color: '#6366f1', band: '#6366f1', tier: 2, quote: "Je sens la puissance monter." },
+  { lvl: 45, letter: '45', name: "Dépassement", color: '#8b5cf6', band: '#8b5cf6', tier: 3, quote: "Je dépasse mes limites d’hier." },
+  { lvl: 50, letter: '50', name: "Excellence", color: '#a855f7', band: '#a855f7', tier: 3, quote: "L’excellence devient une habitude." },
+  { lvl: 55, letter: '55', name: "Optimisation", color: '#d946ef', band: '#d946ef', tier: 3, quote: "Chaque détail compte." },
+  { lvl: 60, letter: '60', name: "Haute performance", color: '#ec4899', band: '#ec4899', tier: 4, quote: "Haute performance, mode activé." },
+  { lvl: 65, letter: '65', name: "Légende en approche", color: '#f43f5e', band: '#f43f5e', tier: 4, quote: "La légende approche…" },
+  { lvl: 70, letter: '70', name: "Surhumain", color: '#ef4444', band: '#ef4444', tier: 4, quote: "Mes limites ? Je ne les trouve plus." },
+  { lvl: 75, letter: '75', name: "Inarrêtable", color: '#f97316', band: '#f97316', tier: 4, quote: "Plus rien ne m’arrête !" },
+  { lvl: 80, letter: '80', name: "Athlète ultime", color: '#f59e0b', band: '#f59e0b', tier: 5, quote: "Athlète ultime, rien de moins." },
+  { lvl: 85, letter: '85', name: "Maître", color: '#eab308', band: '#eab308', tier: 5, quote: "Je maîtrise mon art." },
+  { lvl: 90, letter: '90', name: "Elite", color: '#facc15', band: '#facc15', tier: 5, quote: "L’élite, c’est ici." },
+  { lvl: 95, letter: '95', name: "Légende", color: '#22d3ee', band: '#22d3ee', tier: 6, quote: "On parle de moi dans toutes les salles." },
+  { lvl: 100, letter: '100', name: "Parfait", color: '#60a5fa', band: '#60a5fa', tier: 6, quote: "PAS DE LIMITE !" },
 ];
 
 // XP total nécessaire pour atteindre le niveau n (niveau maximal : 100)
