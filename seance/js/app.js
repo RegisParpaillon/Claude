@@ -519,7 +519,10 @@ function santeCard() {
 }
 function importSante(text) {
   const d = Sante.parseSante(text);
-  if (!d) { toast('Rien à importer : lancez d’abord le Raccourci « Séance Santé »'); return false; }
+  if (!d) {
+    toast(/seance-sante/i.test(text || '') ? 'Le texte copié ne contient pas de valeurs : dans l’action Texte du Raccourci, insérez les variables (bulles colorées)' : 'Rien à importer : lancez d’abord le Raccourci « Séance Santé »');
+    return false;
+  }
   Sante.storeSante(S, d);
   if (d.poids) P().bodyweight = d.poids;
   let added = 0;
