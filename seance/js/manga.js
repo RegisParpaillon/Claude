@@ -197,7 +197,7 @@ export async function loadBuiltinStages() {
       const r = await fetch(`data/${dir}/paliers.json`, { cache: 'no-cache' });
       if (!r.ok) return;
       const j = await r.json();
-      const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/${dir}/${p.image}`);
+      const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/${dir}/${p.anim || p.image}`);
       if (list.length === RANKS.length) builtin[t] = list;
     } catch { /* hors ligne au premier lancement : avatar dessiné */ }
   }));

@@ -1,30 +1,35 @@
 {
- "description": "Image du personnage pour chaque palier (un palier tous les 5 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom.",
+ "description": "Image du personnage pour chaque palier (un palier tous les 5 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom. Un GIF animé (même nom en .gif, champ « anim ») remplace l'image fixe s'il existe.",
  "paliers": [
   {
    "niveau": 1,
    "nom": "Débutant",
-   "image": "niveau-001.jpg"
+   "image": "niveau-001.jpg",
+   "anim": "niveau-001.gif"
   },
   {
    "niveau": 5,
    "nom": "Apprentissage",
-   "image": "niveau-005.jpg"
+   "image": "niveau-005.jpg",
+   "anim": "niveau-005.gif"
   },
   {
    "niveau": 10,
    "nom": "En forme",
-   "image": "niveau-010.jpg"
+   "image": "niveau-010.jpg",
+   "anim": "niveau-010.gif"
   },
   {
    "niveau": 15,
    "nom": "Progression",
-   "image": "niveau-015.jpg"
+   "image": "niveau-015.jpg",
+   "anim": "niveau-015.gif"
   },
   {
    "niveau": 20,
    "nom": "En progression",
-   "image": "niveau-020.jpg"
+   "image": "niveau-020.jpg",
+   "anim": "niveau-020.gif"
   },
   {
    "niveau": 25,
