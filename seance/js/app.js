@@ -4,6 +4,7 @@ import { generateMuscu, swapChoices, swapTo, findExercise, applyMuscuProgress, r
 import { generateRun, applyRunProgress, paces, vdotFrom, fmtPace, fmtDur, kmh, predictTime, QUALITY, QUALITY_ORDER, START_LEVEL, LONG_START } from './run.js';
 import * as Timer from './timer.js';
 import * as Game from './game.js';
+import * as Sante from './sante.js';
 import * as Manga from './manga.js';
 import { heroSvg } from './hero.js';
 import { askClaude, toSession, getApiKey, setApiKey, testApiKey } from './ai.js';
@@ -96,6 +97,7 @@ function render() {
   tabs(['', 'jeu', 'historique', 'profil'].includes(tab) && P().setup ? tab : null);
   if (r === 'profil') return viewProfile();
   if (r === 'jeu') return viewGame(arg);
+  if (r.startsWith('sante')) { const q = decodeURIComponent(location.hash.split('?')[1] || ''); importSante(q.replace(/&/g, ';')); return go('#/'); }
   if (r === 'libre') return viewFreeForm();
   if (r === 'muscu') return viewMuscuForm();
   if (r === 'run') return viewRunForm();
@@ -121,6 +123,7 @@ function viewHome() {
       ${heroChoice('run', '#/run', `Prochain fractionné : ${QUALITY[q].short}`)}
     </div>
     <button class="card free tap" data-go="#/libre"><span class="ce">✨</span><div><b>Demande libre</b><div class="sub">« 40 min haut du corps avec haltères, genou fragile »</div></div><span class="chev">›</span></button>
+    ${santeCard()}
     <h2>Cette semaine</h2>
     <div class="stats">
       <div class="stat"><b>${week.filter(x => x.kind === 'muscu').length}</b><span>séance(s) muscu</span></div>
@@ -155,8 +158,11 @@ function histList(items) {
 
 // ---------- Formulaire : forme du jour ----------
 function formFields(kind) {
-  const last = P().lastForm || {};
-  return `<h2>Ma forme du jour</h2><div class="card pad">${FORM_QUESTIONS.map(q => `
+  const hints = Sante.formHints(S);
+  const last = { ...(P().lastForm || {}), ...(hints.sommeil ? { sommeil: hints.sommeil } : {}), ...(hints.energie ? { energie: hints.energie } : {}) };
+  const sl = Sante.todayVal(S, 'sommeil'), fc = Sante.todayVal(S, 'fc');
+  const note = sl != null || fc != null ? `<div class="banner sante">⌚ Apple Santé : ${[sl != null ? `sommeil ${Sante.fmtH(sl)}` : '', fc != null ? `FC repos ${fc}${hints.fcEcart != null ? ` (${hints.fcEcart >= 0 ? '+' : ''}${hints.fcEcart} vs habitude)` : ''}` : ''].filter(Boolean).join(' · ')}. Curseurs pré-réglés, ajustez si besoin.</div>` : '';
+  return `<h2>Ma forme du jour</h2>${note}<div class="card pad">${FORM_QUESTIONS.map(q => `
     <div class="slider"><div class="sl-top"><b>${q.label}</b><output id="o_${q.id}"></output></div>
     <input type="range" name="${q.id}" min="1" max="5" step="1" value="${last[q.id] ?? 3}" data-out="${q.id}">
     <div class="sl-ends"><span>${q.lo}</span><span>${q.hi}</span></div></div>`).join('')}
@@ -503,6 +509,62 @@ function finish() {
   }, 'Enregistrer');
 }
 
+// ---------- Apple Santé (Garmin) ----------
+function santeCard() {
+  const sl = Sante.latest(S, 'sommeil'), po = Sante.latest(S, 'poids'), fc = Sante.latest(S, 'fc');
+  const fresh = S.sante?.last && Sante.today() === new Date(S.sante.last).toISOString().slice(0, 10);
+  return `<div class="card sante-card"><div class="body"><b>⌚ Garmin · Apple Santé</b>
+      <div class="sub">${sl || po || fc ? [sl ? `😴 ${Sante.fmtH(sl.v)}` : '', po ? `⚖️ ${kg(po.v)} kg` : '', fc ? `❤️ ${fc.v} bpm` : ''].filter(Boolean).join(' · ') + (fresh ? '' : ' · <i>pas encore importé aujourd’hui</i>') : 'Importez sommeil, poids et sorties avec le Raccourci (Profil → Apple Santé).'}</div></div>
+    <button class="mini" data-sante="paste">📥 Importer</button></div>`;
+}
+function importSante(text) {
+  const d = Sante.parseSante(text);
+  if (!d) { toast('Rien à importer : lancez d’abord le Raccourci « Séance Santé »'); return false; }
+  Sante.storeSante(S, d);
+  if (d.poids) P().bodyweight = d.poids;
+  let added = 0;
+  for (const c of d.courses) {
+    const key = `garmin-${c.date}-${c.km}`;
+    if (S.history.some(h => h.garminKey === key)) continue;
+    const date = new Date(c.date + 'T12:00:00').getTime();
+    const sec = Math.round(c.min * 60);
+    const session = { kind: 'run', type: 'garmin', title: '⌚ Sortie Garmin', form: { level: 3, label: 'Non renseignée', emoji: '⌚', note: '' },
+      steps: [{ label: 'Sortie enregistrée par la montre Garmin', sec, kind: 'ef', pace: '' }], totalSec: sec, paces: paces(P().run.vdot), notes: [], tips: [] };
+    const entry = { id: uid(), garminKey: key, date, kind: 'run', title: '⌚ Sortie Garmin', km: c.km, min: Math.round(c.min),
+      summary: `${Math.round(c.min)} min · ${kg(c.km.toFixed(1))} km · ${fmtPace(sec / c.km)} /km`, feel: 'Importée', notes: '', msgs: [], session };
+    entry.xp = Game.entryXp(entry);
+    S.history.push(entry); added++;
+  }
+  if (added) { S.history.sort((a, b) => b.date - a.date); Game.evaluate(S, P().level); }
+  save();
+  const parts = [d.sommeil ? `sommeil ${Sante.fmtH(d.sommeil)}` : '', d.poids ? `${kg(d.poids)} kg` : '', d.fc ? `FC repos ${d.fc}` : '', added ? `${added} sortie${added > 1 ? 's' : ''}` : ''].filter(Boolean);
+  toast(`✅ Importé : ${parts.join(' · ')}`);
+  return true;
+}
+async function pasteSante() {
+  let text = '';
+  try { text = await navigator.clipboard.readText(); } catch { /* refus ou indisponible */ }
+  if (text && importSante(text)) { render(); return; }
+  openSheet('Importer Apple Santé', `<form>
+    <p class="muted">Collez ici le texte copié par le Raccourci « Séance Santé » (appui long → Coller).</p>
+    <textarea name="t" rows="4" placeholder="SEANCE-SANTE;poids=78,4;sommeil=7,2;fc=52"></textarea>
+    <button class="btn primary" type="submit">Importer</button></form>`, f => { if (!importSante(f.t.value)) return false; render(); });
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-sante=paste]')) pasteSante(); });
+
+const SHORTCUT_STEPS = `
+<ol class="steps">
+  <li><b>Garmin Connect</b> (iPhone) → <b>Plus</b> → <b>Paramètres</b> → <b>Applications connectées</b> → <b>Apple Santé</b> : activez le <b>sommeil</b>, le <b>poids</b>, la <b>fréquence cardiaque</b> et les <b>activités</b>.</li>
+  <li>Ouvrez l’app <b>Raccourcis</b> → <b>+</b> → nommez le raccourci <b>Séance Santé</b>.</li>
+  <li>Ajoutez <b>Rechercher des échantillons Santé</b> : type <b>Poids</b>, trier par <b>Date de début</b>, <b>Les plus récents d’abord</b>, limite <b>1</b>.</li>
+  <li>Ajoutez <b>Rechercher des échantillons Santé</b> : type <b>Analyse du sommeil</b>, date de début <b>au cours des 1 derniers jours</b>. Puis <b>Obtenir les détails des échantillons Santé</b> → <b>Durée</b>, puis <b>Calculer des statistiques</b> → <b>Somme</b>.</li>
+  <li>Facultatif : <b>Rechercher des échantillons Santé</b> : type <b>Fréquence cardiaque au repos</b>, les plus récents d’abord, limite <b>1</b>.</li>
+  <li>Ajoutez <b>Texte</b> et écrivez : <code>SEANCE-SANTE;poids=</code>[résultat Poids]<code>;sommeil=</code>[Somme]<code>;fc=</code>[résultat FC] (insérez les résultats avec le bouton des variables).</li>
+  <li>Ajoutez <b>Copier dans le presse-papiers</b>, puis <b>Afficher une notification</b> « Ouvre Séance et touche Importer ».</li>
+  <li>Lancez-le une fois et autorisez l’accès à Santé. Pour l’automatiser : onglet <b>Automatisation</b> → <b>Heure de la journée</b> (ex. 7 h) → <b>Exécuter immédiatement</b>.</li>
+</ol>
+<p class="hint">Sorties running (si votre iOS le permet) : ajoutez une ligne <code>;course=</code>[distance en km]<code>/</code>[durée en min] par sortie, par exemple <code>;course=8,3/46</code>. Sinon, vos sorties restent saisies dans l’app en fin de séance.</p>`;
+
 // ---------- Gamification ----------
 const T = Game.TRACKS;
 function avatar(rankIndex, cls = '', track = 'muscu') {
@@ -814,6 +876,11 @@ function viewProfile() {
       <h2>Programme</h2>
       <div class="card pad"><p class="hint" style="margin-top:0">Muscu : vagues de 3 semaines sur les mouvements de base (${(WAVES[p.level] || WAVES.inter).map(w => `${w.sets}×${w.reps} à ${Math.round(w.pct * 100)} %`).join(', puis ')}), +2,5 kg (haut du corps) ou +5 kg (bas du corps) à chaque vague réussie. Accessoires en double progression.</p>
       <button class="btn" type="button" data-act2="resetprog">Remettre les vagues et le fractionné au début</button></div>
+      <h2>Apple Santé (Garmin)</h2>
+      <div class="card pad"><p class="hint" style="margin-top:0">Votre montre Garmin envoie sommeil, poids et fréquence cardiaque dans Apple Santé. Un Raccourci iPhone les copie, puis vous les importez ici d’un appui : le sommeil pré-règle la forme du jour et le poids met à jour votre profil. Rien ne passe par internet.</p>
+        <button class="btn primary" type="button" data-sante="paste">📥 Importer depuis Apple Santé</button>
+        <details class="guide"><summary>Créer le Raccourci « Séance Santé » (une seule fois)</summary>${SHORTCUT_STEPS}</details>
+        ${S.sante ? `<p class="hint">Dernier import : ${new Date(S.sante.last).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</p>` : ''}</div>
       <h2>Demande libre (Claude)</h2>
       <div class="card pad"><p class="hint" style="margin-top:0">${getApiKey() ? '✅ Clé enregistrée : la demande libre est active.' : 'Ajoutez une clé API Claude pour décrire vos séances en texte libre.'}
         Clé créée sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (quelques centimes par séance). Elle reste sur ce téléphone et n’est pas incluse dans les sauvegardes.</p>

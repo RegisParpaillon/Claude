@@ -441,3 +441,11 @@ a.btn { text-decoration: none; }
 .swap-row details { margin-top: 4px; font-size: 14px; }
 .swap-row summary { color: var(--accent); cursor: pointer; }
 .swap-row details p { margin: 6px 0; }
+/* Apple Santé */
+.sante-card { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-top: 10px; }
+.sante-card .body { flex: 1; }
+.banner.sante { background: var(--ok-soft); margin: 0 0 10px; }
+.guide summary { color: var(--accent); cursor: pointer; margin-top: 12px; font-weight: 600; }
+.steps { padding-left: 20px; font-size: 14px; line-height: 1.45; }
+.steps li { margin: 8px 0; }
+.steps code, .hint code { background: var(--bg); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
