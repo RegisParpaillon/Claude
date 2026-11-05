@@ -26,8 +26,26 @@ function sleepHours(v) {
   return hours(num(v));
 }
 
+// Liste de durées (une par phase de sommeil) : on additionne tout ce qui ressemble à une durée
+function sumDurations(v) {
+  const parts = String(v).split(/[\n,]+|\s{2,}/).map(x => x.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  let tot = 0, n = 0;
+  for (const p of parts) {
+    const h = sleepHours(p);
+    if (h != null && h > 0) { tot += p.match(/^\d+(?:[.,]\d+)?$/) && h > 24 ? 0 : h; n++; }
+  }
+  return n ? tot : null;
+}
+
 export function parseSante(text) {
-  const t = String(text || '');
+  let t = String(text || '');
+  // une liste de durées sur plusieurs lignes après « sommeil= » : on la remplace par sa somme
+  t = t.replace(/sommeil\s*[=:]\s*([\s\S]*?)(?=;\s*[a-z]+\s*[=:]|$)/i, (all, v) => {
+    if (!/\n/.test(v.trim())) return all;
+    const h = sumDurations(v);
+    return h ? `sommeil=${h.toFixed(2)}` : all;
+  });
   if (!/poids|sommeil|fc|course|seance-sante/i.test(t)) return null;
   const out = { courses: [] };
   for (const part of t.split(/[;\n&]+/)) {
