@@ -541,7 +541,7 @@ function importSante(text) {
   if (added) { S.history.sort((a, b) => b.date - a.date); Game.evaluate(S, P().level); }
   save();
   const parts = [d.sommeil ? `sommeil ${Sante.fmtH(d.sommeil)}` : '', d.poids ? `${kg(d.poids)} kg` : '', d.fc ? `FC repos ${d.fc}` : '', added ? `${added} sortie${added > 1 ? 's' : ''}` : ''].filter(Boolean);
-  toast(`✅ Importé : ${parts.join(' · ')}`);
+  toast(`✅ Importé : ${parts.join(' · ')}${d.sommeilDouble ? ` · ⚠️ sommeil ignoré (${Math.round(d.sommeilDouble)} h : phases en double, ajoutez les filtres Source et « n’est pas Au lit » dans le Raccourci)` : ''}`);
   return true;
 }
 async function pasteSante() {

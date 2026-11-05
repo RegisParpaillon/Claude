@@ -15,10 +15,13 @@ function hours(v) {
 }
 
 // Sommeil sous toutes ses formes : 7,2 · 432 (min) · 25920 (s) · 7:12 · 7 h 12 min · 7 heures, 12 minutes
-function sleepHours(v) {
+function sleepHours(v, single = false) {
   const t = String(v).toLowerCase();
-  let m = t.match(/(\d+)\s*:\s*(\d{1,2})/);
-  if (m) return +m[1] + +m[2] / 60;
+  // h:mm:ss (3 parties) ou mm:ss (2 parties, format des Raccourcis pour les durées < 1 h)
+  let m = t.match(/(\d+):(\d{1,2}):(\d{1,2})/);
+  if (m) return +m[1] + +m[2] / 60 + +m[3] / 3600;
+  m = t.match(/(\d+):(\d{1,2})/);
+  if (m) return single ? +m[1] + +m[2] / 60 : +m[1] / 60 + +m[2] / 3600;
   m = t.match(/(\d+(?:[.,]\d+)?)\s*h(?:eure)?s?\D*(\d+)?/);
   if (m) return num(m[1]) + (m[2] ? +m[2] / 60 : 0);
   m = t.match(/(\d+)\s*min/);
@@ -53,7 +56,7 @@ export function parseSante(text) {
     if (!m) continue;
     const k = m[1].toLowerCase(), v = m[2];
     if (k === 'poids') out.poids = num(v);
-    else if (k === 'sommeil') out.sommeil = sleepHours(v);
+    else if (k === 'sommeil') out.sommeil = sleepHours(v, true);
     else if (k === 'fc' || k === 'fcrepos') out.fc = num(v);
     else if (k === 'vfc') out.vfc = num(v);
     else if (k === 'course') {
@@ -64,9 +67,10 @@ export function parseSante(text) {
       if (km && min) out.courses.push({ date, km: km > 200 ? km / 1000 : km, min: min > 600 ? min / 60 : min });
     }
   }
+  if (out.sommeil > 14) { out.sommeilDouble = Math.round(out.sommeil * 10) / 10; delete out.sommeil; }
   for (const k of ['poids', 'sommeil', 'fc', 'vfc']) if (out[k] == null || out[k] <= 0) delete out[k];
   if (out.poids && (out.poids < 30 || out.poids > 250)) delete out.poids;
-  return Object.keys(out).length > 1 || out.courses.length ? out : null;
+  return Object.keys(out).filter(k => k !== 'sommeilDouble').length > 1 || out.courses.length ? out : null;
 }
 
 // Enregistre les valeurs du jour dans S.sante (une valeur par jour et par mesure)
