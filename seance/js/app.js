@@ -39,7 +39,7 @@ const kg = w => String(+(+w).toFixed(2)).replace('.', ',');
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtDate = d => new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), Math.min(10000, 2600 + msg.length * 40)); }
 function parseTime(str) {
   const parts = String(str || '').trim().split(/[:h'’"m\s]+/).filter(Boolean).map(Number);
   if (!parts.length || parts.some(n => !Number.isFinite(n))) return null;
@@ -541,7 +541,7 @@ function importSante(text) {
   if (added) { S.history.sort((a, b) => b.date - a.date); Game.evaluate(S, P().level); }
   save();
   const parts = [d.sommeil ? `sommeil ${Sante.fmtH(d.sommeil)}${d.sommeilSource && d.sommeilSource !== '?' ? ` (${d.sommeilSource})` : ''}` : '', d.poids ? `${kg(d.poids)} kg` : '', d.fc ? `FC repos ${d.fc}` : '', added ? `${added} sortie${added > 1 ? 's' : ''}` : ''].filter(Boolean);
-  toast(`✅ Importé : ${parts.join(' · ')}${d.sommeilDouble ? ` · ⚠️ sommeil ignoré (${Math.round(d.sommeilDouble)} h : phases en double, ajoutez les filtres Source et « n’est pas Au lit » dans le Raccourci)` : ''}`);
+  toast(`✅ Importé : ${parts.join(' · ')}${d.sommeilIllisible ? ` · ⚠️ sommeil non reconnu, ligne reçue : « ${d.sommeilIllisible} »` : ''}${d.sommeilDouble ? ` · ⚠️ sommeil ignoré (${Math.round(d.sommeilDouble)} h : phases en double, ajoutez les filtres Source et « n’est pas Au lit » dans le Raccourci)` : ''}`);
   return true;
 }
 async function pasteSante() {

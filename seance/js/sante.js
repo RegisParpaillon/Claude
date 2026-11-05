@@ -45,9 +45,19 @@ function sumDurations(v) {
 // On écarte « Au lit » et « Éveillé », puis on garde une seule source (Garmin si présente, sinon la plus fournie).
 const SKIP = /in ?bed|au lit|awake|éveil|eveil|réveil/i;
 // Dates ISO 8601 (2026-11-05T23:14:00+01:00) ou « 05/11/2026 23:14 »
+const MOIS = { janv: 0, jan: 0, janvier: 0, fevr: 1, févr: 1, fev: 1, fév: 1, février: 1, fevrier: 1, mars: 2, mar: 2, avr: 3, avril: 3, mai: 4, juin: 5, juil: 6, juillet: 6,
+  aout: 7, août: 7, sept: 8, sep: 8, septembre: 8, oct: 9, octobre: 9, nov: 10, novembre: 10, dec: 11, déc: 11, décembre: 11, decembre: 11,
+  january: 0, february: 1, march: 2, april: 3, may: 4, june: 5, july: 6, august: 7, september: 8, october: 9, november: 10, december: 11, feb: 1, apr: 3, jun: 5, jul: 6, aug: 7 };
 function parseDate(x) {
-  if (/^\d{4}-\d{2}-\d{2}T/.test(x)) { const d = Date.parse(x); return Number.isFinite(d) ? d : null; }
-  const m = x.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\D+(\d{1,2})[:h](\d{2})/);
+  x = String(x).trim();
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d/.test(x)) { const d = Date.parse(x.replace(' ', 'T')); return Number.isFinite(d) ? d : null; }
+  // « 6 nov. 2026 à 00:50 », « 6 novembre 2026 at 0:50 »
+  let m = x.match(/(\d{1,2})\s+([a-zéèûô]+)\.?\s+(\d{4})\D+(\d{1,2})[:h](\d{2})/i);
+  if (m && MOIS[m[2].toLowerCase()] != null) return new Date(+m[3], MOIS[m[2].toLowerCase()], +m[1], +m[4], +m[5]).getTime();
+  // « Nov 6, 2026 at 12:50 AM »
+  m = x.match(/([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})\D+(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  if (m && MOIS[m[1].toLowerCase()] != null) { let hh = +m[4]; if (m[6]) hh = hh % 12 + (/pm/i.test(m[6]) ? 12 : 0); return new Date(+m[3], MOIS[m[1].toLowerCase()], +m[2], hh, +m[5]).getTime(); }
+  m = x.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\D+(\d{1,2})[:h](\d{2})/);
   if (m) return new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1], +m[4], +m[5]).getTime();
   return null;
 }
@@ -95,10 +105,11 @@ export function sumPhases(block) {
 
 export function parseSante(text) {
   let t = String(text || '');
-  let phases = null;
+  let phases = null, unreadable = null;
   t = t.replace(/sommeil\s*[=:]\s*([\s\S]*?)(?=;\s*[a-z]+\s*[=:]|$)/i, (all, v) => {
     if (!v.includes('|')) return all;
     phases = sumPhases(v);
+    if (!phases) unreadable = v.trim().split(/\n/)[0].slice(0, 80);
     return phases ? `sommeil=${phases.h.toFixed(2)}` : 'sommeil=';
   });
   // une liste de durées sur plusieurs lignes après « sommeil= » : on la remplace par sa somme
@@ -126,10 +137,11 @@ export function parseSante(text) {
     }
   }
   if (phases && phases.source !== 'plages') out.sommeilSource = phases.source;
+  if (unreadable) out.sommeilIllisible = unreadable;
   if (out.sommeil > 14) { out.sommeilDouble = Math.round(out.sommeil * 10) / 10; delete out.sommeil; }
   for (const k of ['poids', 'sommeil', 'fc', 'vfc']) if (out[k] == null || out[k] <= 0) delete out[k];
   if (out.poids && (out.poids < 30 || out.poids > 250)) delete out.poids;
-  return Object.keys(out).filter(k => k !== 'sommeilDouble' && k !== 'sommeilSource').length > 1 || out.courses.length ? out : null;
+  return Object.keys(out).filter(k => !['sommeilDouble', 'sommeilSource', 'sommeilIllisible'].includes(k)).length > 1 || out.courses.length ? out : null;
 }
 
 // Enregistre les valeurs du jour dans S.sante (une valeur par jour et par mesure)
