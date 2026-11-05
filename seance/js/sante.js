@@ -44,14 +44,44 @@ function sumDurations(v) {
 // Phases détaillées, une par ligne : « Core | Connect | 23:00 » (type | source | durée, dans n'importe quel ordre).
 // On écarte « Au lit » et « Éveillé », puis on garde une seule source (Garmin si présente, sinon la plus fournie).
 const SKIP = /in ?bed|au lit|awake|éveil|eveil|réveil/i;
+// Dates ISO 8601 (2026-11-05T23:14:00+01:00) ou « 05/11/2026 23:14 »
+function parseDate(x) {
+  if (/^\d{4}-\d{2}-\d{2}T/.test(x)) { const d = Date.parse(x); return Number.isFinite(d) ? d : null; }
+  const m = x.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\D+(\d{1,2})[:h](\d{2})/);
+  if (m) return new Date(+(m[3].length === 2 ? '20' + m[3] : m[3]), +m[2] - 1, +m[1], +m[4], +m[5]).getTime();
+  return null;
+}
+// Plages de sommeil (type | début | fin) : union des plages, sans « Au lit » ni réveils
+function unionHours(rows) {
+  const iv = [];
+  for (const r of rows) {
+    const ds = r.map(parseDate).filter(x => x != null);
+    if (ds.length < 2) continue;
+    const type = r.find(x => parseDate(x) == null) || '';
+    if (SKIP.test(type)) continue;
+    const a = Math.min(ds[0], ds[1]), b = Math.max(ds[0], ds[1]);
+    if (b > a) iv.push([a, b]);
+  }
+  if (!iv.length) return null;
+  iv.sort((x, y) => x[0] - y[0]);
+  let tot = 0, [cs, ce] = iv[0];
+  for (const [a, b] of iv.slice(1)) { if (a <= ce) ce = Math.max(ce, b); else { tot += ce - cs; cs = a; ce = b; } }
+  tot += ce - cs;
+  return tot / 3600000;
+}
+
 export function sumPhases(block) {
   const rows = String(block).split(/\n+/).map(l => l.split('|').map(x => x.trim())).filter(r => r.length >= 2);
   if (!rows.length) return null;
+  if (rows.some(r => r.filter(x => parseDate(x) != null).length >= 2)) {
+    const h = unionHours(rows);
+    return h ? { h, source: 'plages', sources: [] } : null;
+  }
   const items = rows.map(r => {
     const dur = r.find(x => /\d/.test(x) && /:|h|min|^\d+([.,]\d+)?$/.test(x));
     const others = r.filter(x => x !== dur);
     const type = others.find(x => /core|deep|rem|awake|asleep|in ?bed|lit|éveil|eveil|profond|léger|leger|paradox|sommeil|endormi/i.test(x)) || others[0] || '';
-    const source = others.find(x => x !== type) || '?';
+    const source = others.find(x => x !== type && x) || '?';
     return { type, source, h: dur ? sleepHours(dur) : 0 };
   }).filter(i => i.h > 0 && !SKIP.test(i.type));
   if (!items.length) return null;
@@ -95,7 +125,7 @@ export function parseSante(text) {
       if (km && min) out.courses.push({ date, km: km > 200 ? km / 1000 : km, min: min > 600 ? min / 60 : min });
     }
   }
-  if (phases) out.sommeilSource = phases.source;
+  if (phases && phases.source !== 'plages') out.sommeilSource = phases.source;
   if (out.sommeil > 14) { out.sommeilDouble = Math.round(out.sommeil * 10) / 10; delete out.sommeil; }
   for (const k of ['poids', 'sommeil', 'fc', 'vfc']) if (out[k] == null || out[k] <= 0) delete out[k];
   if (out.poids && (out.poids < 30 || out.poids > 250)) delete out.poids;
