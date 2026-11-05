@@ -428,3 +428,16 @@ body.has-tabs { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .hc-info { flex: 1; display: flex; flex-direction: column; }
 .hc-go { margin-top: auto; }
 .hc-next { margin-bottom: 8px; }
+/* Explication et remplacement d'exercice */
+.ex-btns { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.how-txt { font-size: 16px; line-height: 1.5; margin: 14px 4px; }
+a.btn { text-decoration: none; }
+.swap-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.swap-row:last-child { border-bottom: 0; }
+.swap-row .body { flex: 1; min-width: 0; }
+.swap-row .title { font-weight: 600; }
+.swap-row.off { opacity: .5; }
+.swap-row.cur { background: var(--accent-soft); }
+.swap-row details { margin-top: 4px; font-size: 14px; }
+.swap-row summary { color: var(--accent); cursor: pointer; }
+.swap-row details p { margin: 6px 0; }
