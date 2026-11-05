@@ -62,22 +62,36 @@ function parseDate(x) {
   return null;
 }
 // Plages de sommeil (type | début | fin) : union des plages, sans « Au lit » ni réveils
+// Types de phases de sommeil réel (si au moins une est présente, on ne garde qu'elles)
+const ASLEEP = /core|deep|rem|asleep|unspecified|endormi|profond|léger|leger|paradox|sommeil|non sp/i;
 function unionHours(rows) {
-  const iv = [];
+  let iv = [];
   for (const r of rows) {
     const ds = r.map(parseDate).filter(x => x != null);
     if (ds.length < 2) continue;
     const type = r.find(x => parseDate(x) == null) || '';
     if (SKIP.test(type)) continue;
     const a = Math.min(ds[0], ds[1]), b = Math.max(ds[0], ds[1]);
-    if (b > a) iv.push([a, b]);
+    if (b > a && b - a < 16 * 3600000) iv.push([a, b, type]);
   }
+  if (iv.some(x => ASLEEP.test(x[2]))) iv = iv.filter(x => ASLEEP.test(x[2]));
   if (!iv.length) return null;
   iv.sort((x, y) => x[0] - y[0]);
-  let tot = 0, [cs, ce] = iv[0];
-  for (const [a, b] of iv.slice(1)) { if (a <= ce) ce = Math.max(ce, b); else { tot += ce - cs; cs = a; ce = b; } }
-  tot += ce - cs;
-  return tot / 3600000;
+  // fusion des plages qui se chevauchent
+  const merged = [];
+  for (const [a, b] of iv) {
+    const last = merged[merged.length - 1];
+    if (last && a <= last[1]) last[1] = Math.max(last[1], b); else merged.push([a, b]);
+  }
+  // regroupement en « nuits » : deux plages séparées de moins de 2 h font partie de la même nuit
+  const nights = [];
+  for (const m of merged) {
+    const n = nights[nights.length - 1];
+    if (n && m[0] - n.end < 2 * 3600000) { n.end = m[1]; n.ms += m[1] - m[0]; } else nights.push({ start: m[0], end: m[1], ms: m[1] - m[0] });
+  }
+  // la nuit principale = la plus longue (on écarte siestes et fin de la nuit précédente)
+  const main = nights.sort((x, y) => y.ms - x.ms)[0];
+  return main.ms / 3600000;
 }
 
 export function sumPhases(block) {
