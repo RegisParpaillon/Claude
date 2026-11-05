@@ -1,6 +1,6 @@
 import { EQUIPMENT, PAIN_ZONES, ROTATION, DAY_TYPES, LIFT_NAMES, DEFAULT_RATIOS, WAVES } from './data.js';
 import { FORM_QUESTIONS, readiness } from './forme.js';
-import { generateMuscu, swapAccessory, applyMuscuProgress, roundLoad, unitOf, isLoaded, epley } from './muscu.js';
+import { generateMuscu, swapChoices, swapTo, findExercise, applyMuscuProgress, roundLoad, unitOf, isLoaded, epley } from './muscu.js';
 import { generateRun, applyRunProgress, paces, vdotFrom, fmtPace, fmtDur, kmh, predictTime, QUALITY, QUALITY_ORDER, START_LEVEL, LONG_START } from './run.js';
 import * as Timer from './timer.js';
 import * as Game from './game.js';
@@ -19,7 +19,7 @@ function blank() {
   return {
     profile: { setup: false, level: 'inter', bodyweight: 75, lifts: {}, wave: {}, fails: {}, acc: {},
       run: { vdot: 40, refDist: 5000, refTime: null, longMin: 60, longCount: 0, qualCount: 0, qLevel: {} },
-      eq: ['barre', 'rack', 'banc', 'halteres', 'poulie', 'machines', 'traction'], lastForm: null },
+      eq: ['barre', 'rack', 'banc', 'banc_incl', 'halteres', 'poulie', 'machines', 'traction'], lastForm: null },
     rot: 0, current: null, history: [], game: Game.blankGame(),
   };
 }
@@ -198,7 +198,7 @@ function viewMuscuForm() {
     <div class="seg">${[45, 60, 75, 90].map(m => `<label><input type="radio" name="dur" value="${m}" ${m === (P().lastDur || 60) ? 'checked' : ''}><span>${m} min</span></label>`).join('')}</div>
     <h2>Matériel à disposition</h2>
     <div class="card checks">${EQUIPMENT.map(e => `<label class="check"><input type="checkbox" name="eq" value="${e.id}" ${eq.includes(e.id) ? 'checked' : ''}><span>${e.label}</span></label>`).join('')}</div>
-    <p class="hint">Le poids du corps est toujours disponible. Sans barre, les mouvements de base sont remplacés par des variantes.</p>
+    <p class="hint">Le poids du corps est toujours disponible. Banc qui ne s’incline pas : cochez seulement « Banc plat ». Pendant la séance, 🔄 propose d’autres exercices et ❓ explique le mouvement.</p>
     <button class="btn primary big" type="submit">Générer ma séance</button>
   </form>`;
   bindForm();
@@ -301,7 +301,8 @@ function exHtml(e, i) {
     <div class="ex-head"><div class="body"><div class="ex-slot">${e.role === 'main' ? 'Principal' : e.role === 'second' ? 'Secondaire' : esc(e.slotName || 'Accessoire')}</div>
       <div class="ex-name">${esc(e.name)}</div><div class="sub">${esc(e.info)}</div>
       ${e.warn ? `<div class="warn">⚠️ ${esc(e.warn)}</div>` : ''}</div>
-      ${e.swappable ? `<button class="mini" data-act="swap" data-e="${i}" aria-label="Remplacer l’exercice">🔄</button>` : ''}</div>
+      <div class="ex-btns"><button class="mini" data-act="how" data-e="${i}" aria-label="Comment faire ce mouvement">❓</button>
+      ${e.swappable ? `<button class="mini" data-act="swap" data-e="${i}" aria-label="Remplacer l’exercice">🔄</button>` : ''}</div></div>
     <button class="rest-edit" data-act="rest" data-e="${i}">⏱ Récupération : <b>${fmtDur(e.rest)}</b> · modifier</button>
     ${sets}</div>`;
 }
@@ -417,10 +418,8 @@ $('#app').addEventListener('click', e => {
       save(); viewSessionKeep(); toast(`Récupération : ${fmtDur(t)} pour cet exercice`);
     });
   }
-  if (a === 'swap') {
-    if (!swapAccessory(P(), s, +b.dataset.e)) toast('Pas d’autre variante avec ce matériel');
-    save(); viewSessionKeep(); return;
-  }
+  if (a === 'swap') return swapSheet(+b.dataset.e);
+  if (a === 'how') return howSheet(s.exercises[+b.dataset.e]);
   if (a === 'guide') {
     Timer.start(s.steps.map(x => ({ label: x.label, sec: x.sec, pace: x.pace, kind: x.kind })), { mode: 'run' });
     requestWake(); return;
@@ -430,6 +429,34 @@ $('#app').addEventListener('click', e => {
     if (confirm('Abandonner cette séance ? Elle ne sera pas enregistrée.')) { S.current = null; Timer.stop(); save(); go('#/'); }
   }
 });
+const EQ_LABEL = Object.fromEntries(EQUIPMENT.map(e => [e.id, e.label]));
+const videoUrl = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' exercice musculation technique')}`;
+function howSheet(ex) {
+  const c = findExercise(ex.id);
+  openSheet(esc(ex.name), `<form>
+    ${c?.how ? `<p class="how-txt">${esc(c.how)}</p>` : '<p class="muted">Pas de description pour cet exercice.</p>'}
+    ${c?.req?.length ? `<p class="hint">Matériel : ${c.req.map(r => EQ_LABEL[r] || r).join(', ')}</p>` : ''}
+    <a class="btn" href="${videoUrl(ex.name)}" target="_blank" rel="noopener">▶ Voir une vidéo de démonstration</a>
+    ${ex.swappable ? '<button class="btn" type="button" data-how-swap>🔄 Choisir un autre exercice</button>' : ''}
+  </form>`, null);
+  $('#sheet [data-how-swap]')?.addEventListener('click', () => swapSheet(S.current.exercises.indexOf(ex)));
+}
+function swapSheet(idx) {
+  const s = S.current, ex = s.exercises[idx];
+  const list = swapChoices(s, idx).sort((a, b) => (b.ok - a.ok));
+  const row = (o, k) => `<div class="swap-row ${o.ok ? '' : 'off'} ${o.current ? 'cur' : ''}">
+      <div class="body"><div class="title">${esc(o.name)}${o.current ? ' <span class="pill ok">actuel</span>' : ''}${o.hurt ? ' <span class="pill soon">zone sensible</span>' : ''}</div>
+        <div class="sub">${o.ok ? (o.req.length ? o.req.map(r => EQ_LABEL[r] || r).join(' · ') : 'Poids du corps') : `Manque : ${o.missing.map(r => EQ_LABEL[r] || r).join(', ')}`}</div>
+        <details><summary>Comment faire ?</summary><p>${esc(o.how || '')}</p><a href="${videoUrl(o.name)}" target="_blank" rel="noopener">▶ Vidéo</a></details></div>
+      ${o.ok && !o.current ? `<button type="button" class="mini" data-pick="${k}">Choisir</button>` : ''}</div>`;
+  openSheet('Remplacer l’exercice', `<form>
+    <p class="muted">${esc(ex.slotName || (ex.lift ? LIFT_NAMES[ex.lift] : ''))} · les options grisées demandent du matériel que vous n’avez pas coché.</p>
+    <div class="card">${list.map(row).join('')}</div></form>`, null);
+  $('#sheet').querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
+    const o = list[+b.dataset.pick];
+    swapTo(P(), s, idx, o.id); save(); closeSheet(); viewSessionKeep(); toast(`Remplacé par : ${o.name}`);
+  }));
+}
 function viewSessionKeep() { const y = window.scrollY; viewSession(); window.scrollTo(0, y); }
 
 function finish() {

@@ -29,8 +29,8 @@ function pickMainVariant(lift, eq, pains) {
   return vs.find(v => !painful(v, pains)) || vs[0];
 }
 
-function mainBlock(profile, lift, role, eq, form, pains) {
-  const v = pickMainVariant(lift, eq, pains);
+function mainBlock(profile, lift, role, eq, form, pains, forced) {
+  const v = forced || pickMainVariant(lift, eq, pains);
   const hurt = painful(v, pains);
   const extraLoad = hurt ? .9 : 1;
   if (v.type === 'bar') {
@@ -41,7 +41,7 @@ function mainBlock(profile, lift, role, eq, form, pains) {
     const sets = Math.max(2, scheme.sets + form.setDelta);
     const w = roundLoad(profile.lifts[lift] * scheme.pct * form.load * extraLoad, 'bar');
     const ex = {
-      id: v.id, lift, role, name: v.name, type: 'bar', rest: scheme.rest, swappable: false,
+      id: v.id, lift, role, name: v.name, type: 'bar', rest: scheme.rest, swappable: true,
       info: role === 'main'
         ? `Mouvement principal · semaine ${(profile.wave[lift] || 0) % 3 + 1}/3 de la vague · ${Math.round(scheme.pct * 100)} % du max estimé (${profile.lifts[lift]} kg)`
         : `Mouvement secondaire · ${Math.round(scheme.pct * 100)} % du max estimé`,
@@ -56,8 +56,8 @@ function mainBlock(profile, lift, role, eq, form, pains) {
   }
   // variante sans barre : traitée comme un accessoire en double progression
   const acc = { ...v, ref: lift, sets: 4, rest: 120 };
-  const ex = accessoryBlock(profile, acc, form, `Remplace le ${LIFT_NAMES[lift].toLowerCase()} (pas de matériel adapté)`);
-  ex.lift = lift; ex.role = role; ex.swappable = false;
+  const ex = accessoryBlock(profile, acc, form, `Remplace le ${LIFT_NAMES[lift].toLowerCase()} (variante sans barre)`);
+  ex.lift = lift; ex.role = role; ex.swappable = true;
   if (hurt) ex.warn = 'Zone douloureuse sollicitée : allez-y prudemment.';
   return ex;
 }
@@ -115,13 +115,30 @@ export function generateMuscu(profile, { rot, eq, form, pains, duration }) {
   };
 }
 
-export function swapAccessory(profile, session, idx) {
+// Catalogue complet indexé par identifiant (pour l'explication ❓ et les remplacements)
+const ALL = new Map();
+for (const m of Object.values(MAIN)) for (const v of m.variants) ALL.set(v.id, v);
+for (const day of Object.values(SLOTS)) for (const sl of day) for (const o of sl.opts) if (!ALL.has(o.id)) ALL.set(o.id, o);
+export const findExercise = id => ALL.get(id) || null;
+
+// Toutes les options d'un exercice de la séance, avec leur disponibilité selon le matériel
+export function swapChoices(session, idx) {
   const ex = session.exercises[idx];
-  const opts = slotOptions(session.day, ex.slot, session.eq, session.pains);
-  if (opts.length < 2) return false;
-  const cur = opts.findIndex(o => o.id === ex.id);
-  const next = opts[(cur + 1) % opts.length];
-  const nx = accessoryBlock(profile, next, session.form);
+  const list = (ex.role === 'main' || ex.role === 'second') && ex.lift
+    ? MAIN[ex.lift].variants
+    : ex.slot != null && session.day ? SLOTS[session.day][ex.slot].opts : [];
+  return list.map(o => ({ ...o, ok: hasAll(o.req, session.eq), hurt: painful(o, session.pains || []), current: o.id === ex.id,
+    missing: o.req.filter(r => !session.eq.includes(r)) }));
+}
+export function swapTo(profile, session, idx, optId) {
+  const ex = session.exercises[idx];
+  if ((ex.role === 'main' || ex.role === 'second') && ex.lift) {
+    const v = MAIN[ex.lift].variants.find(x => x.id === optId); if (!v) return false;
+    session.exercises[idx] = mainBlock(profile, ex.lift, ex.role, session.eq, session.form, session.pains || [], v);
+    return true;
+  }
+  const opt = SLOTS[session.day][ex.slot].opts.find(o => o.id === optId); if (!opt) return false;
+  const nx = accessoryBlock(profile, opt, session.form);
   nx.slot = ex.slot; nx.slotName = ex.slotName;
   session.exercises[idx] = nx;
   return true;
