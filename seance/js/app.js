@@ -540,7 +540,7 @@ function importSante(text) {
   }
   if (added) { S.history.sort((a, b) => b.date - a.date); Game.evaluate(S, P().level); }
   save();
-  const parts = [d.sommeil ? `sommeil ${Sante.fmtH(d.sommeil)}` : '', d.poids ? `${kg(d.poids)} kg` : '', d.fc ? `FC repos ${d.fc}` : '', added ? `${added} sortie${added > 1 ? 's' : ''}` : ''].filter(Boolean);
+  const parts = [d.sommeil ? `sommeil ${Sante.fmtH(d.sommeil)}${d.sommeilSource && d.sommeilSource !== '?' ? ` (${d.sommeilSource})` : ''}` : '', d.poids ? `${kg(d.poids)} kg` : '', d.fc ? `FC repos ${d.fc}` : '', added ? `${added} sortie${added > 1 ? 's' : ''}` : ''].filter(Boolean);
   toast(`✅ Importé : ${parts.join(' · ')}${d.sommeilDouble ? ` · ⚠️ sommeil ignoré (${Math.round(d.sommeilDouble)} h : phases en double, ajoutez les filtres Source et « n’est pas Au lit » dans le Raccourci)` : ''}`);
   return true;
 }
@@ -560,9 +560,10 @@ const SHORTCUT_STEPS = `
   <li><b>Garmin Connect</b> (iPhone) → <b>Plus</b> → <b>Paramètres</b> → <b>Applications connectées</b> → <b>Apple Santé</b> : activez le <b>sommeil</b>, le <b>poids</b>, la <b>fréquence cardiaque</b> et les <b>activités</b>.</li>
   <li>Ouvrez l’app <b>Raccourcis</b> → <b>+</b> → nommez le raccourci <b>Séance Santé</b>.</li>
   <li>Ajoutez <b>Rechercher des échantillons Santé</b> : type <b>Poids</b>, trier par <b>Date de début</b>, <b>Les plus récents d’abord</b>, limite <b>1</b>.</li>
-  <li>Ajoutez <b>Rechercher des échantillons Santé</b> : type <b>Analyse du sommeil</b>, date de début <b>au cours des 1 derniers jours</b>. Puis <b>Obtenir les détails des échantillons Santé</b> → <b>Durée</b>, puis <b>Calculer des statistiques</b> → <b>Somme</b>.</li>
+  <li>Ajoutez <b>Rechercher des échantillons Santé</b> : type <b>Sommeil</b>, date de début <b>dans les derniers 1 jour</b>, sans autre filtre.</li>
+  <li>Ajoutez <b>Répéter avec chaque élément</b> (sur les échantillons du sommeil). À l’intérieur, ajoutez <b>Texte</b> : bulle <b>Élément de répétition</b> → touchez-la → <b>Valeur</b>, tapez <code> | </code>, bulle <b>Élément de répétition</b> → <b>Source</b>, tapez <code> | </code>, bulle <b>Élément de répétition</b> → <b>Durée</b>. L’app trie elle-même les phases (sans « Au lit » ni réveils, une seule source).</li>
   <li>Facultatif : <b>Rechercher des échantillons Santé</b> : type <b>Fréquence cardiaque au repos</b>, les plus récents d’abord, limite <b>1</b>.</li>
-  <li>Ajoutez <b>Texte</b> et écrivez : <code>SEANCE-SANTE;poids=</code>[résultat Poids]<code>;sommeil=</code>[Somme]<code>;fc=</code>[résultat FC] (insérez les résultats avec le bouton des variables).</li>
+  <li>Ajoutez <b>Texte</b> et écrivez : <code>SEANCE-SANTE;poids=</code>[résultat Poids]<code>;sommeil=</code>[Résultats de répétition]<code>;fc=</code>[résultat FC] (insérez les résultats avec le bouton des variables).</li>
   <li>Ajoutez <b>Copier dans le presse-papiers</b>, puis <b>Afficher une notification</b> « Ouvre Séance et touche Importer ».</li>
   <li>Lancez-le une fois et autorisez l’accès à Santé. Pour l’automatiser : onglet <b>Automatisation</b> → <b>Heure de la journée</b> (ex. 7 h) → <b>Exécuter immédiatement</b>.</li>
 </ol>
