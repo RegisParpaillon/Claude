@@ -89,8 +89,9 @@ function unionHours(rows) {
     const n = nights[nights.length - 1];
     if (n && m[0] - n.end < 2 * 3600000) { n.end = m[1]; n.ms += m[1] - m[0]; } else nights.push({ start: m[0], end: m[1], ms: m[1] - m[0] });
   }
-  // la nuit principale = la plus longue (on écarte siestes et fin de la nuit précédente)
-  const main = nights.sort((x, y) => y.ms - x.ms)[0];
+  // la dernière nuit (au moins 2 h de sommeil) ; à défaut, la plus longue — siestes et nuits précédentes écartées
+  const real = nights.filter(n => n.ms >= 2 * 3600000);
+  const main = real.length ? real.sort((x, y) => y.end - x.end)[0] : nights.sort((x, y) => y.ms - x.ms)[0];
   return main.ms / 3600000;
 }
 
