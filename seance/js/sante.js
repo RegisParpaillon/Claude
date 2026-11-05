@@ -14,6 +14,18 @@ function hours(v) {
   return v / 3600;
 }
 
+// Sommeil sous toutes ses formes : 7,2 · 432 (min) · 25920 (s) · 7:12 · 7 h 12 min · 7 heures, 12 minutes
+function sleepHours(v) {
+  const t = String(v).toLowerCase();
+  let m = t.match(/(\d+)\s*:\s*(\d{1,2})/);
+  if (m) return +m[1] + +m[2] / 60;
+  m = t.match(/(\d+(?:[.,]\d+)?)\s*h(?:eure)?s?\D*(\d+)?/);
+  if (m) return num(m[1]) + (m[2] ? +m[2] / 60 : 0);
+  m = t.match(/(\d+)\s*min/);
+  if (m && !/h/.test(t)) return +m[1] / 60;
+  return hours(num(v));
+}
+
 export function parseSante(text) {
   const t = String(text || '');
   if (!/poids|sommeil|fc|course|seance-sante/i.test(t)) return null;
@@ -23,7 +35,7 @@ export function parseSante(text) {
     if (!m) continue;
     const k = m[1].toLowerCase(), v = m[2];
     if (k === 'poids') out.poids = num(v);
-    else if (k === 'sommeil') out.sommeil = hours(num(v));
+    else if (k === 'sommeil') out.sommeil = sleepHours(v);
     else if (k === 'fc' || k === 'fcrepos') out.fc = num(v);
     else if (k === 'vfc') out.vfc = num(v);
     else if (k === 'course') {
