@@ -41,8 +41,36 @@ function sumDurations(v) {
   return n ? tot : null;
 }
 
+// Phases détaillées, une par ligne : « Core | Connect | 23:00 » (type | source | durée, dans n'importe quel ordre).
+// On écarte « Au lit » et « Éveillé », puis on garde une seule source (Garmin si présente, sinon la plus fournie).
+const SKIP = /in ?bed|au lit|awake|éveil|eveil|réveil/i;
+export function sumPhases(block) {
+  const rows = String(block).split(/\n+/).map(l => l.split('|').map(x => x.trim())).filter(r => r.length >= 2);
+  if (!rows.length) return null;
+  const items = rows.map(r => {
+    const dur = r.find(x => /\d/.test(x) && /:|h|min|^\d+([.,]\d+)?$/.test(x));
+    const others = r.filter(x => x !== dur);
+    const type = others.find(x => /core|deep|rem|awake|asleep|in ?bed|lit|éveil|eveil|profond|léger|leger|paradox|sommeil|endormi/i.test(x)) || others[0] || '';
+    const source = others.find(x => x !== type) || '?';
+    return { type, source, h: dur ? sleepHours(dur) : 0 };
+  }).filter(i => i.h > 0 && !SKIP.test(i.type));
+  if (!items.length) return null;
+  const bySource = {};
+  for (const i of items) bySource[i.source] = (bySource[i.source] || 0) + i.h;
+  const srcs = Object.keys(bySource);
+  const garmin = srcs.find(x => /connect|garmin|forerunner|fenix|venu|vivo|instinct|epix/i.test(x));
+  const keep = garmin || srcs.sort((a, b) => bySource[b] - bySource[a])[0];
+  return { h: bySource[keep], source: keep, sources: srcs };
+}
+
 export function parseSante(text) {
   let t = String(text || '');
+  let phases = null;
+  t = t.replace(/sommeil\s*[=:]\s*([\s\S]*?)(?=;\s*[a-z]+\s*[=:]|$)/i, (all, v) => {
+    if (!v.includes('|')) return all;
+    phases = sumPhases(v);
+    return phases ? `sommeil=${phases.h.toFixed(2)}` : 'sommeil=';
+  });
   // une liste de durées sur plusieurs lignes après « sommeil= » : on la remplace par sa somme
   t = t.replace(/sommeil\s*[=:]\s*([\s\S]*?)(?=;\s*[a-z]+\s*[=:]|$)/i, (all, v) => {
     if (!/\n/.test(v.trim())) return all;
@@ -67,10 +95,11 @@ export function parseSante(text) {
       if (km && min) out.courses.push({ date, km: km > 200 ? km / 1000 : km, min: min > 600 ? min / 60 : min });
     }
   }
+  if (phases) out.sommeilSource = phases.source;
   if (out.sommeil > 14) { out.sommeilDouble = Math.round(out.sommeil * 10) / 10; delete out.sommeil; }
   for (const k of ['poids', 'sommeil', 'fc', 'vfc']) if (out[k] == null || out[k] <= 0) delete out[k];
   if (out.poids && (out.poids < 30 || out.poids > 250)) delete out.poids;
-  return Object.keys(out).filter(k => k !== 'sommeilDouble').length > 1 || out.courses.length ? out : null;
+  return Object.keys(out).filter(k => k !== 'sommeilDouble' && k !== 'sommeilSource').length > 1 || out.courses.length ? out : null;
 }
 
 // Enregistre les valeurs du jour dans S.sante (une valeur par jour et par mesure)
