@@ -1,35 +1,30 @@
 {
- "description": "Image du personnage pour chaque palier (un palier tous les 5 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom. Un GIF animé (même nom en .gif, champ « anim ») remplace l'image fixe s'il existe.",
+ "description": "Image du personnage pour chaque palier (un tous les 5 niveaux). Les GIF de « animations » (dossier anim/) les remplacent : répartis régulièrement de 1 à 100 (25 GIF = un tous les 4 niveaux). Pour changer une image, remplacez le fichier par un autre portant le même nom.",
  "paliers": [
   {
    "niveau": 1,
    "nom": "Débutant",
-   "image": "niveau-001.jpg",
-   "anim": "niveau-001.gif"
+   "image": "niveau-001.jpg"
   },
   {
    "niveau": 5,
    "nom": "Apprentissage",
-   "image": "niveau-005.jpg",
-   "anim": "niveau-005.gif"
+   "image": "niveau-005.jpg"
   },
   {
    "niveau": 10,
    "nom": "En forme",
-   "image": "niveau-010.jpg",
-   "anim": "niveau-010.gif"
+   "image": "niveau-010.jpg"
   },
   {
    "niveau": 15,
    "nom": "Progression",
-   "image": "niveau-015.jpg",
-   "anim": "niveau-015.gif"
+   "image": "niveau-015.jpg"
   },
   {
    "niveau": 20,
    "nom": "En progression",
-   "image": "niveau-020.jpg",
-   "anim": "niveau-020.gif"
+   "image": "niveau-020.jpg"
   },
   {
    "niveau": 25,
@@ -111,5 +106,32 @@
    "nom": "Parfait",
    "image": "niveau-100.jpg"
   }
+ ],
+ "animations": [
+  "anim/niveau-01.gif",
+  "anim/niveau-02.gif",
+  "anim/niveau-03.gif",
+  "anim/niveau-04.gif",
+  "anim/niveau-05.gif",
+  "anim/niveau-06.gif",
+  "anim/niveau-07.gif",
+  "anim/niveau-08.gif",
+  "anim/niveau-09.gif",
+  "anim/niveau-10.gif",
+  "anim/niveau-11.gif",
+  "anim/niveau-12.gif",
+  "anim/niveau-13.gif",
+  "anim/niveau-14.gif",
+  "anim/niveau-15.gif",
+  "anim/niveau-16.gif",
+  "anim/niveau-17.gif",
+  "anim/niveau-18.gif",
+  "anim/niveau-19.gif",
+  "anim/niveau-20.gif",
+  "anim/niveau-21.gif",
+  "anim/niveau-22.gif",
+  "anim/niveau-23.gif",
+  "anim/niveau-24.gif",
+  "anim/niveau-25.gif"
  ]
 }

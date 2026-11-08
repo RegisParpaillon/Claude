@@ -571,9 +571,9 @@ const SHORTCUT_STEPS = `
 
 // ---------- Gamification ----------
 const T = Game.TRACKS;
-function avatar(rankIndex, cls = '', track = 'muscu') {
+function avatar(rankIndex, cls = '', track = 'muscu', level = null) {
   const rk = { ...T[track].ranks[rankIndex], index: rankIndex };
-  const st = Manga.stageUrl(rankIndex, track);
+  const st = Manga.levelUrl(level ?? T[track].ranks[rankIndex].lvl, track, rankIndex);
   if (st) return `<img class="avatar stage ${cls}" src="${st}" alt="Mon personnage ${T[track].label}, palier ${esc(rk.name)}">`;
   const url = track === 'muscu' ? Manga.avatarUrl(rk) : null;
   return url ? `<img class="avatar photo ${cls}" src="${url}" alt="Mon avatar manga">` : heroSvg(rk, { cls });
@@ -584,7 +584,7 @@ function trackState(track) {
 }
 function miniLevel(track = 'muscu') {
   const { L, R } = trackState(track);
-  return `<button class="card lvl-mini tap" data-go="#/jeu/${track}"><div class="lvl-face">${avatar(R.index, '', track)}</div>
+  return `<button class="card lvl-mini tap" data-go="#/jeu/${track}"><div class="lvl-face">${avatar(R.index, '', track, L.level)}</div>
     <div class="body"><div class="lvl-track">${T[track].icon} ${T[track].label}</div><b>Niv. ${L.level} · ${R.name}</b><div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
     <div class="sub">${L.max ? 'Niveau maximal 👑' : `${L.cur} / ${L.need} XP`}</div></div></button>`;
 }
@@ -592,7 +592,7 @@ function miniLevel(track = 'muscu') {
 function heroChoice(track, href, next) {
   const { L, R } = trackState(track);
   return `<button class="hero-choice tap" data-go="${href}" style="--rc:${R.color}">
-    <div class="hc-img">${avatar(R.index, '', track)}</div>
+    <div class="hc-img">${avatar(R.index, '', track, L.level)}</div>
     <div class="hc-info"><div class="hc-title">${T[track].icon} ${T[track].label}</div>
       <div class="hc-lvl">Niv. ${L.level} · ${esc(R.name)}</div>
       <div class="xpbar"><i style="width:${Math.round(100 * L.cur / L.need)}%;background:${R.color}"></i></div>
@@ -635,7 +635,7 @@ function viewGame(track = 'muscu') {
   $('#app').innerHTML = `
     <div class="seg two track-seg">${Object.entries(T).map(([k, t]) => `<label><input type="radio" name="trk" value="${k}" ${k === track ? 'checked' : ''} data-go="#/jeu/${k}"><span>${t.icon} ${t.label}</span></label>`).join('')}</div>
     <div class="panel" style="--rc:${R.color}">
-      <div class="panel-art ${hasSt ? 'is-stage' : track === 'muscu' && Manga.hasPhoto() ? 'is-photo' : ''}">${hasSt ? `<div class="stage-bg" style="background-image:url(${Manga.stageUrl(R.index, track)})"></div>` : ''}<div class="art-wrap">${avatar(R.index, 'big', track)}${statBox(track)}</div>
+      <div class="panel-art ${hasSt ? 'is-stage' : track === 'muscu' && Manga.hasPhoto() ? 'is-photo' : ''}">${hasSt ? `<div class="stage-bg" style="background-image:url(${Manga.levelUrl(L.level, track, R.index)})"></div>` : ''}<div class="art-wrap">${avatar(R.index, 'big', track, L.level)}${statBox(track)}</div>
         ${hasSt ? '' : `<div class="bubble">${esc(R.quote)}</div><div class="rank-badge">${R.letter}</div>`}</div>
       <div class="panel-info">
         <div class="lvl-num">${T[track].icon} NIV. <b>${L.level}</b></div>
@@ -665,7 +665,7 @@ function viewGame(track = 'muscu') {
       return `<div class="badge ${t ? 'got' : ''}"><span>${t ? b.icon : '🔒'}</span><b>${b.name}</b><small>${b.desc}</small></div>`; }).join('')}</div>
     <h2>Les paliers ${T[track].label.toLowerCase()}</h2>
     ${hasSt ? `<div class="stages">${ranks.map((x, i) => `<div class="stage-card ${i > R.index ? 'locked' : ''} ${i === R.index ? 'current' : ''}">
-        <img src="${Manga.stageUrl(i, track)}" alt=""><div class="stage-lbl"><b>Niv. ${x.lvl}</b>${x.name}</div>${i > R.index ? '<span class="lock">🔒</span>' : ''}</div>`).join('')}</div>`
+        <img src="${Manga.levelUrl(x.lvl, track, i)}" alt=""><div class="stage-lbl"><b>Niv. ${x.lvl}</b>${x.name}</div>${i > R.index ? '<span class="lock">🔒</span>' : ''}</div>`).join('')}</div>`
       : `<div class="card">${ranks.map((x, i) => `<div class="row ${i > R.index ? 'locked' : ''}"><span class="rank-chip" style="background:${x.color}">${x.letter}</span>
       <div class="body"><div class="title">${x.name}</div><div class="sub">À partir du niveau ${x.lvl}</div></div>${i === R.index ? '<span class="pill ok">actuel</span>' : ''}</div>`).join('')}</div>`}
     <p class="hint">${track === 'run' ? 'XP running : sortie terminée (+60), minutes de course (+1,5/min), fractionné ou sortie longue (+25), quêtes running et badges running en bonus.' : 'XP muscu : séance terminée (+60), chaque série de travail (+5), échauffement complet (+25), quêtes muscu et badges en bonus.'}</p>`;
@@ -685,7 +685,7 @@ function photoEditor(track = 'muscu') {
       <p class="hint" style="margin-top:4px">${Manga.hasLocalStages(track) ? 'Planche importée sur ce téléphone (elle remplace celle du site).' : Manga.hasStages(track) ? `Les images du site (dossier data/${T[track].dir}) sont utilisées. Vous pouvez importer une autre planche sur ce téléphone :` : `Une image en grille avec une case par palier (${ranks.length} cases, du niveau 1 au niveau 100, lues de gauche à droite) : l’app la découpe et affiche la case de votre palier.`}</p>
       <div class="grid2"><button type="button" class="btn primary" data-ph="sheet">Importer une planche</button>
       ${Manga.hasLocalStages(track) ? '<button type="button" class="btn danger" data-ph="delsheet">Retirer</button>' : '<span></span>'}</div>
-      ${Manga.hasStages(track) ? `<div class="stages mini">${ranks.map((x, i) => `<img src="${Manga.stageUrl(i, track)}" alt="${esc(x.name)}">`).join('')}</div>` : ''}</div>
+      ${Manga.hasStages(track) ? `<div class="stages mini">${ranks.map((x, i) => `<img src="${Manga.levelUrl(x.lvl, track, i)}" alt="${esc(x.name)}">`).join('')}</div>` : ''}</div>
     <div ${track === 'run' ? 'hidden' : ''}><h2>Ou une seule image</h2>
     <div class="grid2"><button type="button" class="btn primary" data-ph="pick">📷 Photo / selfie</button>
       ${src ? '<button type="button" class="btn danger" data-ph="del">Supprimer</button>' : '<span></span>'}</div>
@@ -756,7 +756,7 @@ function celebrate(xp, ev, before, track = 'muscu') {
   el.innerHTML = `<div class="cel-box" style="--rc:${R.color}">
     <div class="cel-rays"></div>
     <div class="cel-title">${rankUp ? 'NOUVEAU PALIER !' : up ? 'LEVEL UP !' : 'BIEN JOUÉ !'}</div>
-    <div class="cel-art">${avatar(R.index, 'big', track)}</div>
+    <div class="cel-art">${avatar(R.index, 'big', track, L.level)}</div>
     ${up ? `<div class="cel-lvl">${T[track].icon} ${T[track].label} : niveau ${before} → <b>${L.level}</b>${rankUp ? `<br>${R.name}` : ''}</div>` : `<div class="cel-lvl">${T[track].icon} ${T[track].label} : niveau ${L.level}${L.max ? '' : ` · encore ${L.need - L.cur} XP`}</div>`}
     <div class="cel-xp">+${xp + ev.by[track]} XP</div>
     <ul class="cel-list">

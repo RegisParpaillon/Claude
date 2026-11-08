@@ -189,6 +189,7 @@ export function avatarUrl(rank) {
 const DIRS = { muscu: 'paliers', run: 'running' };
 const LOCAL_KEYS = { muscu: 'seance-stages', run: 'seance-stages-run' };
 const builtin = {};
+const anims = {};
 const local = {};
 for (const t of Object.keys(LOCAL_KEYS)) { try { local[t] = JSON.parse(localStorage.getItem(LOCAL_KEYS[t]) || 'null'); } catch { local[t] = null; } }
 export async function loadBuiltinStages() {
@@ -197,15 +198,23 @@ export async function loadBuiltinStages() {
       const r = await fetch(`data/${dir}/paliers.json`, { cache: 'no-cache' });
       if (!r.ok) return;
       const j = await r.json();
-      const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/${dir}/${p.anim || p.image}`);
+      const list = (j.paliers || []).sort((a, b) => a.niveau - b.niveau).map(p => `data/${dir}/${p.image}`);
       if (list.length === RANKS.length) builtin[t] = list;
+      if (Array.isArray(j.animations) && j.animations.length) anims[t] = j.animations.map(a => `data/${dir}/${a}`);
     } catch { /* hors ligne au premier lancement : avatar dessiné */ }
   }));
 }
 const localList = t => (Array.isArray(local[t]) && local[t].length === RANKS.length ? local[t] : null);
 export const hasLocalStages = (t = 'muscu') => !!localList(t);
-export const hasStages = (t = 'muscu') => !!(localList(t) || builtin[t]);
+export const hasStages = (t = 'muscu') => !!(localList(t) || builtin[t] || anims[t]);
 export const stageUrl = (i, t = 'muscu') => { const l = localList(t) || builtin[t]; return l ? l[Math.min(l.length - 1, Math.max(0, i))] : null; };
+// Image pour un niveau donné : planche importée > GIF animé (répartis sur 1-100) > image du palier
+export function levelUrl(level, t = 'muscu', rankIndex = 0) {
+  if (localList(t)) return stageUrl(rankIndex, t);
+  const a = anims[t];
+  if (a?.length) return a[Math.min(a.length - 1, Math.max(0, Math.floor((level - 1) * a.length / 100)))];
+  return stageUrl(rankIndex, t);
+}
 export function removeStages(t = 'muscu') { localStorage.removeItem(LOCAL_KEYS[t]); local[t] = null; }
 export function saveStages(list, t = 'muscu') { localStorage.setItem(LOCAL_KEYS[t], JSON.stringify(list)); local[t] = list; }
 
